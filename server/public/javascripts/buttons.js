@@ -25,14 +25,17 @@ $(document).ready(function() {
 
 function setModeNone() {
     console.log("Setting mode to none -local");
+	socket.emit('setNone');
 }
 
 function setModeRock1() {
     console.log("Setting mode to Rock1 -local");
+	socket.emit('setRock1');
 }
 
 function setModeRock2() {
     console.log("Setting mode to Custom Rock -local");
+	socket.emit('setRock2');
 }
 
 function volUp() {
@@ -42,4 +45,15 @@ function volUp() {
 
 function volDown() {
 	console.log("Lowering volume -local");
+	socket.emit('volDown');
+}
+
+function tempDown() {
+	console.log("Lowering volume -local");
+	socket.emit('volDown');
+}
+
+function tempUp() {
+	console.log("Lowering volume -local");
+	socket.emit('volDown');
 }
