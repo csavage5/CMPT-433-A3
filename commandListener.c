@@ -94,12 +94,49 @@ static void* listenerThread(void *arg) {
         }
 
         detectCommands();
-        printf("0: %s, 1: %s\n", commands[0], commands[1]);
+        printf("0: %s, 1: %s, 2: %s\n", commands[0], commands[1], commands[2]);
 
-        if (strcmp("vol", commands[0]) == 0) {
+        if (strcmp("q", commands[0]) == 0) {
+            // CASE: server sent "q" - reply with requested info
+            // TODO 
+
+            if (strcmp("vol", commands[1]) == 0) {
+
+            } else if (strcmp("tempo", commands[1]) == 0) {
+
+            }
+
+        } else if (strcmp("vol", commands[0]) == 0) {
             // CASE: server sent "vol" - change volume by requested 
             //       amount if possible, reply with new volume
             // TODO 
+
+            if (strcmp("u", commands[1]) == 0) {
+
+            } else if (strcmp("d", commands[1]) == 0) {
+
+            }
+
+        } else if (strcmp("tempo", commands[0]) == 0) {
+            // CASE: server sent "tempo" - change tempo by requested 
+            //       amount if possible, reply with new tempo
+            // TODO 
+
+            if (strcmp("u", commands[1]) == 0) {
+
+            } else if (strcmp("d", commands[1]) == 0) {
+
+            }
+
+        } else if (strcmp("p", commands[0]) == 0) {
+            // CASE: server sent "p" - play drum or beat sound
+            // TODO 
+
+            if (strcmp("drum", commands[1]) == 0) {
+
+            } else if (strcmp("beat", commands[1]) == 0) {
+
+            } 
 
         } else {
             sprintf(pMessage, "Error: invalid command \"%s\"\n\n", commands[0]);
