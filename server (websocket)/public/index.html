@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+	<title>BeagleBone Beat-Box</title>
+	<meta charset="UTF-8">
+	<link rel='stylesheet' href='/stylesheets/style.css'></link>
+</head>
+
+<body>
+<form>
+	<h1>BeagleBone Beat-Box</h1>
+	<div>by YourNameGoesHere!</div>
+
+	<p>This page is a partial solution to what's needed. You'll need to add some extra sections for tempo and triggering sounds via buttons.</p>
+	
+	<div id='content'>
+		<div id='status-box'>
+			<h2>BeatBox's Status</h2>
+			<div id='status'>Device up for:</div>
+			<div id="timer">00:00:00(H:M:S)</div>
+		</div>
+		
+		<div id='left-box'>
+			<div id='modediv'>
+				<h2>Drum Beat Selection</h2>
+				<p>Current drum beat mode is: <strong><span id="modeid"></span></strong></p>
+				<p>
+					<input type="button" id="modeNone"  value="None" onclick="setModeNone()"/>
+					<input type="button" id="modeRock1" value="Rock #1" onclick="setModeRock1()"/>
+					<input type="button" id="modeRock2" value="Describe Your Beat here" onclick="setModeRock2()"/>
+				</p>
+				<h3>Volume</h3>
+				<p>
+					<input type="button" id="volumeDown" value=" - " onclick="volDown()"/>
+					<input type="text"   id="volumeid" value="???" size="3" readonly/>
+					<input type="button" id="volumeUp" value=" + " onclick="volUp()"/>
+					(0 - 100)
+				</p>
+				<h3>Tempo</h3>
+				<p>
+					<input type="button" id="tempoDown" value=" - "/>
+					<input type="text"   id="tempoid" value="???" size="3" readonly/>
+					<input type="button" id="tempoUp" value=" + "/>
+					(0 - 100)
+				</p>
+				<h1>Play Drum Sounds</h1>
+				<p>
+					<input type="button" id="PlayHiHat" value="Hi-Hat"/>
+					<input type="button"   id="PlaySnare" value="Snare" size="3" readonly/>
+					<input type="button" id="PlayBase" value=" Base"/>
+				</p>
+			</div>
+			
+		</div>
+		<div id='error-box'>
+			<h2>Server Error</h2>
+			<p>Server error detected. Please resolve error before continuing.</p>
+			<div><code id='error-text'>No error yet... did you hide this div correctly via Javascript? :)</code></div>
+		</div>
+
+	</div>
+</form>
+	
+	<script src='/socket.io/socket.io.js' type='text/javascript'></script>
+	<script src='http://code.jquery.com/jquery-1.11.1.min.js' type='text/javascript'></script>
+
+	<script src='javascripts/beatbox_ui.js' type='text/javascript'></script>
+
+	<script type="text/javascript" src="javascripts/code.js"></script>
+	<script type="text/javascript" src="javascripts/buttons.js"></script>
+</body>
+</html>
