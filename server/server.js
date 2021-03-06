@@ -4,7 +4,7 @@
 //
 // Launch server with:
 //   $ node server.js
-var PORT_NUMBER = 8042;
+var PORT_NUMBER = 8088;
 
 
 var http = require('http');
@@ -63,8 +63,8 @@ function sendFile(response, filePath, fileContents) {
 }
 
 
-// /*
-//  * Create the Math server to listen for the websocket
-//  */
-// var mathServer = require('./lib/math_server');
-// mathServer.listen(server);
+/*
+ * Create the Math server to listen for the websocket
+ */
+var audioServer = require('./lib/audio_server');
+audioServer.listen(server);
