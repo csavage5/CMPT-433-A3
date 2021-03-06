@@ -7,6 +7,7 @@
 #include <errno.h>
 
 #include "commandListener.h"
+#include "shutdownManager.h"
 
 #define MAX_LEN_UDP 1500  // 1500 bytes max in UDP packet
 #define PORT 12345
@@ -22,7 +23,7 @@ static unsigned int sinRemote_len = sizeof(sinRemote);
 
 static char *pMessage;
 static char messageBuffer[MAX_LEN_UDP];
-static char *commands[2];
+static char *commands[3];
 
 static void socketInit();
 static void* listenerThread(void *arg);
@@ -80,9 +81,9 @@ static void* listenerThread(void *arg) {
     memcpy(pMessage, messageBuffer, messageLen);
     strcpy(pMessage, "Hello there!\n");
 
-    char *endptr = NULL; // for strtol
+    //char *endptr = NULL; // for strtol
 
-    while(1) {
+    while(!sm_isShutdown()) {
 
         // sinRemote captures counterparty address information
         messageLen = recvfrom(socketDescriptor, messageBuffer, MAX_LEN_UDP, 0, (struct sockaddr *) &sinRemote, &sinRemote_len);
@@ -95,8 +96,9 @@ static void* listenerThread(void *arg) {
         detectCommands();
         printf("0: %s, 1: %s\n", commands[0], commands[1]);
 
-        if (strcmp("uptime", commands[0]) == 0) {
-            // CASE: server sent "uptime" - get uptime from /proc/uptime
+        if (strcmp("vol", commands[0]) == 0) {
+            // CASE: server sent "vol" - change volume by requested 
+            //       amount if possible, reply with new volume
             // TODO 
 
         } else {
@@ -131,11 +133,13 @@ static void detectCommands() {
     char *token = NULL;
     commands[0] = NULL;
     commands[1] = NULL;
+    commands[2] = NULL;
+
     
     token = strtok(messageBuffer, " ");
    
-    while (i < 2 && token != NULL ) {
-        // will be MAX 2 tokens to the command
+    while (i < 3 && token != NULL ) {
+        // will be MAX 3 tokens to the command
         // CASE: token contains a newline character - remove it
         // adapted from https://stackoverflow.com/questions/9628637/how-can-i-get-rid-of-n-from-string-in-c
         if ( (newline = strchr(token, '\n')) != NULL) {
