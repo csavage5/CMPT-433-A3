@@ -1,0 +1,18 @@
+Volume Control
+- Volume up: "vol u [amount]"
+- Volume down: "vol d [amount]"
+- Get current volume: "q vol"
+
+Tempo Control
+- Tempo up: "tempo u [amount]"
+- Tempo down: "tempo d [amount]"
+- Get current tempo: "q tempo"
+
+Sound Control
+- Play specific drum: "p drum [hh|snare|bass]"
+
+Beat Control
+- Play specific beat: "p beat [0|1|2]"
+
+General Status
+- Get uptime: "q uptime"
