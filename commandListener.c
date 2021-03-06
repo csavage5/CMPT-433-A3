@@ -104,6 +104,8 @@ static void* listenerThread(void *arg) {
 
             } else if (strcmp("tempo", commands[1]) == 0) {
 
+            } else if (strcmp("uptime", commands[1]) == 0) {
+
             }
 
         } else if (strcmp("vol", commands[0]) == 0) {
