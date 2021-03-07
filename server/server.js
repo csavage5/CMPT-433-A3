@@ -64,7 +64,7 @@ function sendFile(response, filePath, fileContents) {
 
 
 /*
- * Create the Math server to listen for the websocket
+ * Create the Audio server to listen for the websocket
  */
 var audioServer = require('./lib/audio_server');
 audioServer.listen(server);

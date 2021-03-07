@@ -1,5 +1,5 @@
 # Deploy this Node.js project to the public folder
-PROJECT_NAME=beatbox-server-copy
+PROJECT_NAME=beatbox-server
 DEPLOY_PATH= $(HOME)/cmpt433/public/as3/$(PROJECT_NAME)-copy
 
 all: deploy node_install
