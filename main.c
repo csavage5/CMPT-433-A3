@@ -5,6 +5,7 @@
 
 #include "commandListener.h"
 #include "shutdownManager.h"
+#include "joystickController.h"
 
 int main() {
     
@@ -16,6 +17,8 @@ int main() {
 
     // Call thread constructors
     commandListener_init();
+    joystickController_init();
+
 
     // Wait until shutdown is triggered 
     sm_waitForShutdownOnMainThread();
