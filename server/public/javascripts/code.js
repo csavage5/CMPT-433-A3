@@ -1,5 +1,9 @@
 "use strict";
 
+// get startup time
+const start = new Date();
+const startTime = start.getTime();
+
 // Run when webpage fully loaded
 $(document).ready(function() {
 	// Register a callback function for the changeBtn button:
@@ -35,7 +39,13 @@ $(document).ready(function() {
 // }
 
 function updateTime() {
-	var now = new Date();
-	var timeStr = now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds() + "(H:M:S)";
+	var timeCheck = new Date();
+	var currentTime = timeCheck.getTime();
+
+	var hours = Math.floor(((currentTime - startTime) / 1000) / 3600);
+	var minutes = Math.floor((((currentTime - startTime) / 1000) / 60) - (hours * 3600));
+	var seconds = Math.floor(((currentTime - startTime) / 1000) - (hours * 3600) - (minutes * 60));
+
+	var timeStr = hours + ':' + minutes + ':' + seconds + "(H:M:S)";
 	$('#timer').html(timeStr);
 }
