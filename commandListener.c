@@ -116,11 +116,11 @@ static void* listenerThread(void *arg) {
 
             if (strcmp("u", commands[1]) == 0) {
                 changeVolume(atoi(commands[2]), 1);
-                sprintf(pReply, "vol %d", AudioMixer_getVolume());
+                sprintf(pReply, "%d", AudioMixer_getVolume());
 
             } else if (strcmp("d", commands[1]) == 0) {
                 changeVolume(atoi(commands[2]), 0);
-                sprintf(pReply, "vol %d", AudioMixer_getVolume());
+                sprintf(pReply, "%d", AudioMixer_getVolume());
 
             }
 
