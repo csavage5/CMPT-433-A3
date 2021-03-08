@@ -8,6 +8,7 @@
 
 #include "commandListener.h"
 #include "shutdownManager.h"
+#include "audioMixer.h"
 
 #define MAX_LEN_UDP 1500  // 1500 bytes max in UDP packet
 #define PORT 12345

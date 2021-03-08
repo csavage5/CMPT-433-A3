@@ -3,20 +3,26 @@
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
+#include <alsa/asoundlib.h>
 
 #include "joystickController.h"
+#include "audioMixer.h"
+
 
 enum direction {UP, DOWN, LEFT, RIGHT, PUSHED, NONE};
 
-struct timespec init;
+struct timespec startTime, currTime;
 
 static pthread_t threadPID;
+
+#define INPUT_DELAY_VOL_TEMPO_NSEC 100000000 // INPUT_DELAY_NSEC
+static enum direction lastDirection = NONE; // the last accepted direction
+static time_t lastAcceptedInput;            // when the last joystick input was accepted
 
 static void* listenerThread(void *arg);
 static void initializePins();
 static void exportPin(int pin);
 static enum direction detectDirection();
-static enum direction lastDirection = NONE;
 
 
 void joystickController_init() {
@@ -29,7 +35,8 @@ void joystickController_init() {
 
 static void* listenerThread(void *arg) {
     initializePins();
-    
+    clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
+
     while(1) {
         
         // TODO wait for joystick direction to be pressed
@@ -38,9 +45,17 @@ static void* listenerThread(void *arg) {
         {
             case UP:
                 // TODO UP: volume +5
+                if (AudioMixer_getVolume() + 5 <= AUDIOMIXER_MAX_VOLUME) {
+                    AudioMixer_setVolume(AudioMixer_getVolume() + 5);
+                    printf("[joystickController] set VOL: %d\n", AudioMixer_getVolume());
+                }
                 break;
             case DOWN:
                 // TODO DOWN: volume -5
+                if (AudioMixer_getVolume() - 5 >= AUDIOMIXER_MIN_VOLUME) {
+                    AudioMixer_setVolume(AudioMixer_getVolume() - 5);
+                    printf("[joystickController] set VOL: %d\n", AudioMixer_getVolume());
+                }
                 break;
             case LEFT:
                 // TODO LEFT: BPM -5
@@ -63,14 +78,17 @@ static void* listenerThread(void *arg) {
 
 
 static void initializePins() {
+    struct timespec sleepTime;
+    sleepTime.tv_nsec = 300000000;
+
     exportPin(26); // up
     exportPin(46); // down
     exportPin(65); // left
     exportPin(47); // right
     exportPin(27); // pushed
 
-    // wait for pins to be exported
-    nanosleep(&init, NULL);
+    // wait for final pin to be exported
+    nanosleep(&sleepTime, NULL);
 }
 
 static void exportPin(int pin) {
@@ -105,7 +123,7 @@ static enum direction detectDirection() {
     for (int i = 0; i < 5; i++) {
         FILE *pFile = fopen(filenames[i], "r");
         if (pFile == NULL) {
-            printf("ERROR: Unable to open export file.\n");
+            printf("ERROR: Unable to open joystick export file.\n");
             break;
             //exit(1); 
         }   
@@ -117,16 +135,21 @@ static enum direction detectDirection() {
         //printf("%s", buff);
         if (buff[0] == '0') {
             
-            if (lastDirection != NONE) {
+            clock_gettime(CLOCK_MONOTONIC_RAW, &currTime);
+            
+            if (lastDirection == i && (currTime.tv_nsec - startTime.tv_nsec) < INPUT_DELAY_VOL_TEMPO_NSEC) {
                 // CASE: user is holding same input from last check
+                //       and delay period hasn't elapsed - pretend no input received
                 return NONE;
             }
 
+            clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);            
             lastDirection = i;
             return i;
         }
     }
-    
+
+    clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);            
     lastDirection = NONE;
     return NONE;
 }

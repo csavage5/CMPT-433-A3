@@ -6,6 +6,7 @@
 #include "commandListener.h"
 #include "shutdownManager.h"
 #include "joystickController.h"
+#include "audioMixer.h"
 
 int main() {
     
@@ -18,6 +19,8 @@ int main() {
     // Call thread constructors
     commandListener_init();
     joystickController_init();
+    AudioMixer_init();
+    
 
 
     // Wait until shutdown is triggered 
