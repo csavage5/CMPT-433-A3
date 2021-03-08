@@ -22,7 +22,7 @@ static int socketDescriptor;
 static struct sockaddr_in sinRemote;
 static unsigned int sinRemote_len = sizeof(sinRemote);
 
-static char *pMessage;
+static char *pReply;
 static char messageBuffer[MAX_LEN_UDP];
 static char *commands[3];
 
@@ -30,6 +30,7 @@ static void socketInit();
 static void* listenerThread(void *arg);
 static void detectCommands();
 static void sendReply();
+static void changeVolume(int value, int direction);
 
 
 void commandListener_init() {
@@ -70,17 +71,13 @@ static void socketInit() {
             get uptime; reply with uptime
 */
 
-
 static void* listenerThread(void *arg) {
 
     socketInit();
 
     static int messageLen; // tracks # of bytes received from packet, -1 if error
 
-
-    pMessage = (char*)malloc(16000 * sizeof(char)); // malloc space for receiving from getArray
-    memcpy(pMessage, messageBuffer, messageLen);
-    strcpy(pMessage, "Hello there!\n");
+    pReply = (char*)malloc(16000 * sizeof(char)); // malloc space for reply
 
     //char *endptr = NULL; // for strtol
 
@@ -99,61 +96,60 @@ static void* listenerThread(void *arg) {
 
         if (strcmp("q", commands[0]) == 0) {
             // CASE: server sent "q" - reply with requested info
-            // TODO 
 
             if (strcmp("vol", commands[1]) == 0) {
-
+                sprintf(pReply, "vol %d", AudioMixer_getVolume());
             } else if (strcmp("tempo", commands[1]) == 0) {
-
+                // TODO 
             } else if (strcmp("uptime", commands[1]) == 0) {
-
+                // TODO 
             }
 
         } else if (strcmp("vol", commands[0]) == 0) {
             // CASE: server sent "vol" - change volume by requested 
             //       amount if possible, reply with new volume
-            // TODO 
 
             if (strcmp("u", commands[1]) == 0) {
+                changeVolume(atoi(commands[2]), 1);
+                sprintf(pReply, "vol %d", AudioMixer_getVolume());
 
             } else if (strcmp("d", commands[1]) == 0) {
+                changeVolume(atoi(commands[2]), 0);
+                sprintf(pReply, "vol %d", AudioMixer_getVolume());
 
             }
 
         } else if (strcmp("tempo", commands[0]) == 0) {
             // CASE: server sent "tempo" - change tempo by requested 
             //       amount if possible, reply with new tempo
-            // TODO 
 
             if (strcmp("u", commands[1]) == 0) {
-
+                // TODO 
             } else if (strcmp("d", commands[1]) == 0) {
-
+                // TODO 
             }
 
         } else if (strcmp("p", commands[0]) == 0) {
             // CASE: server sent "p" - play drum or beat sound
-            // TODO 
 
             if (strcmp("drum", commands[1]) == 0) {
-
+                // TODO 
             } else if (strcmp("beat", commands[1]) == 0) {
-
+                // TODO 
             } 
 
         } else {
-            sprintf(pMessage, "Error: invalid command \"%s\"\n\n", commands[0]);
+            sprintf(pReply, "Error: invalid command \"%s\"\n\n", commands[0]);
         }
 
-        printf("Size of pMessage: %u\n", strlen(pMessage));
+        printf("Size of pMessage: %u\n", strlen(pReply));
 
         // reply with message
         sendReply();
         
         // wipe buffers for next command
         memset(messageBuffer, '\0', sizeof(messageBuffer));
-        memset(pMessage, '\0', sizeof(*pMessage));
-        //memcpy(pMessage, messageBuffer, messageLen);
+        memset(pReply, '\0', sizeof(*pReply));
 
     }
 
@@ -205,9 +201,9 @@ static void sendReply() {
     //        the \n pointer
     //      - set new starting point to next character after last \n
 
-    char *pStart = pMessage;
+    char *pStart = pReply;
     char *pEnd = NULL;      // last \n encountered
-    char *pCursor = pMessage;
+    char *pCursor = pReply;
 
     int bytesSinceLastNewline = 0; //bytes since last \n
     int bytesToSend = 0;
@@ -230,7 +226,7 @@ static void sendReply() {
             
         }
 
-        printf("Sending %d bytes of pMessage...\n", bytesToSend);
+        printf("Sending %d bytes of pReply...\n", bytesToSend);
         err = sendto(socketDescriptor, pStart, bytesToSend, 
                         0, (struct sockaddr *) &sinRemote, sinRemote_len);
        
@@ -245,7 +241,7 @@ static void sendReply() {
         bytesSinceLastNewline = 0;
     }
 
-    printf("Sending %d bytes of pMessage...\n", strlen(pStart));
+    printf("Sending %d bytes of pReply...\n", strlen(pStart));
     err = sendto(socketDescriptor, pStart, strlen(pStart), 
                     0, (struct sockaddr *) &sinRemote, sinRemote_len);
     
@@ -254,6 +250,23 @@ static void sendReply() {
     }
 
 }
+
+// Pass 0 for down, 1 for up
+static void changeVolume(int value, int direction) {
+    switch (direction) {
+        case 0:
+            AudioMixer_setVolume(AudioMixer_getVolume() - value);
+            break;
+
+        case 1:
+            AudioMixer_setVolume(AudioMixer_getVolume() + value);
+            break;
+
+        default:
+            break;
+    }
+}
+
 
 
 void commandListener_shutdown() {
@@ -268,8 +281,8 @@ void commandListener_shutdown() {
     close(socketDescriptor);
 
     // free heap memory
-    free(pMessage);
-    pMessage = NULL;
+    free(pReply);
+    pReply = NULL;
 
     printf("Module [commandListener] shut down\n");
 }

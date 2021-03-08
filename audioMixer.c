@@ -8,6 +8,7 @@
 #include <limits.h>
 #include <alloca.h> // needed for mixer
 
+static pthread_mutex_t mutVolume = PTHREAD_MUTEX_INITIALIZER;
 
 static snd_pcm_t *handle;
 
@@ -188,7 +189,14 @@ void AudioMixer_cleanup(void)
 int AudioMixer_getVolume() {
 	// Return the cached volume; good enough unless someone is changing
 	// the volume through other means and the cached value is out of date.
-	return volume;
+	int temp;
+	pthread_mutex_lock(&mutVolume);
+	{
+		temp = volume;
+	}
+	pthread_mutex_unlock(&mutVolume);
+
+	return temp;
 }
 
 // Function copied from:
@@ -196,8 +204,11 @@ int AudioMixer_getVolume() {
 // Written by user "trenki".
 void AudioMixer_setVolume(int newVolume) {
 	// Ensure volume is reasonable; If so, cache it for later getVolume() calls.
+	pthread_mutex_lock(&mutVolume);
+
 	if (newVolume < AUDIOMIXER_MIN_VOLUME || newVolume > AUDIOMIXER_MAX_VOLUME) {
 		printf("ERROR: Volume must be between 0 and 100.\n");
+		pthread_mutex_unlock(&mutVolume);
 		return;
 	}
 	volume = newVolume;
@@ -222,6 +233,8 @@ void AudioMixer_setVolume(int newVolume) {
     snd_mixer_selem_set_playback_volume_all(elem, volume * max / 100);
 
     snd_mixer_close(handle);
+	
+	pthread_mutex_unlock(&mutVolume);
 }
 
 
