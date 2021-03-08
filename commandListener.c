@@ -99,7 +99,7 @@ static void* listenerThread(void *arg) {
             // CASE: server sent "q" - reply with requested info
 
             if (strcmp("vol", commands[1]) == 0) {
-                sprintf(pReply, "vol %d", AudioMixer_getVolume());
+                sprintf(pReply, "%d", AudioMixer_getVolume());
             } else if (strcmp("tempo", commands[1]) == 0) {
                 printf("ERROR: not implemented");
             } else if (strcmp("uptime", commands[1]) == 0) {
