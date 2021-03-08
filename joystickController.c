@@ -15,7 +15,7 @@ struct timespec startTime, currTime;
 
 static pthread_t threadPID;
 
-#define INPUT_DELAY_VOL_TEMPO_NSEC 100000000 // INPUT_DELAY_NSEC
+#define INPUT_DELAY_VOL_TEMPO_NSEC 200000000
 static enum direction lastDirection = NONE; // the last accepted direction
 static time_t lastAcceptedInput;            // when the last joystick input was accepted
 
@@ -23,6 +23,7 @@ static void* listenerThread(void *arg);
 static void initializePins();
 static void exportPin(int pin);
 static enum direction detectDirection();
+static long getTimespecDifference();
 
 
 void joystickController_init() {
@@ -35,14 +36,13 @@ void joystickController_init() {
 
 static void* listenerThread(void *arg) {
     initializePins();
+    //timespec_get(&startTime, TIME_UTC);
     clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
-
     while(1) {
         
         // TODO wait for joystick direction to be pressed
 
-        switch (detectDirection())
-        {
+        switch (detectDirection()) {
             case UP:
                 // TODO UP: volume +5
                 if (AudioMixer_getVolume() + 5 <= AUDIOMIXER_MAX_VOLUME) {
@@ -134,22 +134,29 @@ static enum direction detectDirection() {
         fclose(pFile);
         //printf("%s", buff);
         if (buff[0] == '0') {
-            
-            clock_gettime(CLOCK_MONOTONIC_RAW, &currTime);
-            
-            if (lastDirection == i && (currTime.tv_nsec - startTime.tv_nsec) < INPUT_DELAY_VOL_TEMPO_NSEC) {
+            //printf("direction: %d\n", i);
+            //timespec_get(&currTime, TIME_UTC);
+            clock_gettime( CLOCK_MONOTONIC_RAW, &currTime);
+            if (lastDirection == i && getTimespecDifference() < INPUT_DELAY_VOL_TEMPO_NSEC) {
                 // CASE: user is holding same input from last check
                 //       and delay period hasn't elapsed - pretend no input received
+                //printf("Direction: %d\nTime: %ld\n", i, currTime.tv_nsec - startTime.tv_nsec);
                 return NONE;
             }
 
-            clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);            
+            //timespec_get(&startTime, TIME_UTC);
+            clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
             lastDirection = i;
             return i;
         }
     }
 
-    clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);            
+    //timespec_get(&startTime, TIME_UTC);
+    clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
     lastDirection = NONE;
     return NONE;
+}
+
+static long getTimespecDifference() {
+    return ((long)currTime.tv_sec * 1000000000L + currTime.tv_nsec) - ((long)startTime.tv_sec * 1000000000L + startTime.tv_nsec);
 }
