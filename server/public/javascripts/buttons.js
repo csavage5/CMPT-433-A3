@@ -14,8 +14,18 @@ $(document).ready(function() {
 		document.getElementById("error-box").style.display = "none";
 	});
 
+	socket.on('uptime', function(result) {
+		$('#timer').html(result);
+		clearTimeout(errorTimer);
+		document.getElementById("error-box").style.display = "none";
+	});
 
-	
+	socket.on('volumeControl', function(result) {
+		console.log(result)
+		document.getElementById('volumeid').value = result;
+	});
+
+	window.setInterval(function() {updateTime()}, 1000);
 });
 
 function setErrorTimer() {
@@ -24,6 +34,13 @@ function setErrorTimer() {
 		console.log("Server did not respond in time. Ensure server.js is running")
 		document.getElementById("error-box").style.display = "block";
 	}, 5000);
+}
+
+function updateTime() {
+	socket.emit('timeRequest');
+
+	// var timeStr = hours + ':' + minutes + ':' + seconds + "(H:M:S)";
+	// $('#timer').html(timeStr);
 }
 
 function setModeNone() {

@@ -6,14 +6,8 @@ const startTime = start.getTime();
 
 // Run when webpage fully loaded
 $(document).ready(function() {
-	// Register a callback function for the changeBtn button:
-	$('#changeBtn').click(function() {
-		// Log a message and call other function.
-		console.log("Clicked button!");
-		changeBoxStyles();
-	});
+	// Register a callback function for the changeBtn button:	
 	
-	window.setInterval(function() {updateTime()}, 1000);
 });
 
 // function changeBoxStyles() {
@@ -39,12 +33,7 @@ $(document).ready(function() {
 // }
 
 function updateTime() {
-	var timeCheck = new Date();
-	var currentTime = timeCheck.getTime();
-
-	var hours = Math.floor(((currentTime - startTime) / 1000) / 3600);
-	var minutes = Math.floor((((currentTime - startTime) / 1000) / 60) - (hours * 3600));
-	var seconds = Math.floor(((currentTime - startTime) / 1000) - (hours * 3600) - (minutes * 60));
+	socket.emit('timeRequest');
 
 	var timeStr = hours + ':' + minutes + ':' + seconds + "(H:M:S)";
 	$('#timer').html(timeStr);

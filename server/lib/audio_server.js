@@ -4,16 +4,22 @@
 
 var dgram = require('dgram');
 var client = dgram.createSocket('udp4');
+var timeClient = dgram.createSocket('udp4');
 
 var socketio = require('socket.io');
 var io;
 
+// handle incoming UDP
+client.on('listening', () => {
+    const address = client.address();
+    console.log(`server listening on ${address.address}:${address.port}`);
+})
+
 exports.listen = function(server) {
 	io = socketio.listen(server);
 	io.set('log level 1');
-	
-	io.sockets.on('connection', function(socket) {
 
+	io.sockets.on('connection', function(socket) {
 		handleCommand(socket);
 	});
 	
@@ -42,12 +48,22 @@ function handleCommand(socket) {
 	socket.on('volDown', function(){
         var message = 'Lowering volume';
 		client.send('vol d 5',12345, 'localhost');
+        client.on('message', (msg, senderInfo) => {
+            // Translate from byte array to string
+            msg = String.fromCharCode.apply(null,msg);
+            socket.emit('volumeControl', msg);
+        });
         socket.emit('daResponse', message);
     });
 
 	socket.on('volUp', function(){
         var message = 'Raising volume';
 		client.send('vol u 5',12345, 'localhost');
+        client.on('message', (msg, senderInfo) => {
+            // Translate from byte array to string
+            msg = String.fromCharCode.apply(null,msg);
+            socket.emit('volumeControl', msg);
+        });
         socket.emit('daResponse', message);
     });
 
@@ -80,4 +96,19 @@ function handleCommand(socket) {
 		client.send('p drum base',12345, 'localhost');
         socket.emit('daResponse', message);
     });
+
+    socket.on('timeRequest', function(){
+        timeClient.send('q uptime',12345, 'localhost');
+		timeClient.on('message', (msg, senderInfo) => {
+            // Translate from byte array to string
+            msg = String.fromCharCode.apply(null,msg);
+            socket.emit('uptime', msg);
+        });
+    });
 }
+
+timeClient.on('listening', () => {
+    const address = timeClient.address();
+    console.log(`server listening on ${address.address}:${address.port}`);
+    });
+
