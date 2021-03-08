@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
 
 #include "commandListener.h"
 #include "shutdownManager.h"
@@ -20,8 +22,6 @@ int main() {
     commandListener_init();
     joystickController_init();
     AudioMixer_init();
-    
-
 
     // Wait until shutdown is triggered 
     sm_waitForShutdownOnMainThread();

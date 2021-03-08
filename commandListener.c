@@ -30,8 +30,9 @@ static void socketInit();
 static void* listenerThread(void *arg);
 static void detectCommands();
 static void sendReply();
-static void changeVolume(int value, int direction);
 
+static void changeVolume(int value, int direction);
+static int getUptime();
 
 void commandListener_init() {
 
@@ -100,9 +101,13 @@ static void* listenerThread(void *arg) {
             if (strcmp("vol", commands[1]) == 0) {
                 sprintf(pReply, "vol %d", AudioMixer_getVolume());
             } else if (strcmp("tempo", commands[1]) == 0) {
-                // TODO 
+                printf("ERROR: not implemented");
             } else if (strcmp("uptime", commands[1]) == 0) {
-                // TODO 
+                int uptime = getUptime();
+                int hours = uptime / 3600;
+                int minutes = (uptime - (hours * 3600)) / 60;
+                int seconds = uptime - ( (hours * 3600) + (minutes * 60) );
+                sprintf(pReply, "%02d:%02d:%02d\n", hours, minutes, seconds);
             }
 
         } else if (strcmp("vol", commands[0]) == 0) {
@@ -267,7 +272,11 @@ static void changeVolume(int value, int direction) {
     }
 }
 
-
+static int getUptime() {
+    FILE *pFile = fopen("/proc/uptime", "r");
+    fgets(messageBuffer, MAX_LEN_UDP, pFile);
+    return atoi(strtok(messageBuffer, " "));
+}
 
 void commandListener_shutdown() {
 
