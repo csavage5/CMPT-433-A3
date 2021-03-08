@@ -1,7 +1,7 @@
 // Incomplete implementation of an audio mixer. Search for "REVISIT" to find things
 // which are left as incomplete.
 // Note: Generates low latency audio on BeagleBone Black; higher latency found on host.
-#include "audioMixer_template.h"
+#include "audioMixer.h"
 #include <alsa/asoundlib.h>
 #include <stdbool.h>
 #include <pthread.h>
@@ -53,7 +53,7 @@ void AudioMixer_init(void)
 	// REVISIT:- Implement this. Hint: set the pSound pointer to NULL for each
 	//     sound bite.
 
-
+	// TODO
 
 
 	// Open the PCM output
@@ -157,7 +157,7 @@ void AudioMixer_queueSound(wavedata_t *pSound)
 	 */
 
 
-
+	// TODO
 
 
 }
@@ -185,8 +185,7 @@ void AudioMixer_cleanup(void)
 }
 
 
-int AudioMixer_getVolume()
-{
+int AudioMixer_getVolume() {
 	// Return the cached volume; good enough unless someone is changing
 	// the volume through other means and the cached value is out of date.
 	return volume;
@@ -195,10 +194,9 @@ int AudioMixer_getVolume()
 // Function copied from:
 // http://stackoverflow.com/questions/6787318/set-alsa-master-volume-from-c-code
 // Written by user "trenki".
-void AudioMixer_setVolume(int newVolume)
-{
+void AudioMixer_setVolume(int newVolume) {
 	// Ensure volume is reasonable; If so, cache it for later getVolume() calls.
-	if (newVolume < 0 || newVolume > AUDIOMIXER_MAX_VOLUME) {
+	if (newVolume < AUDIOMIXER_MIN_VOLUME || newVolume > AUDIOMIXER_MAX_VOLUME) {
 		printf("ERROR: Volume must be between 0 and 100.\n");
 		return;
 	}
@@ -273,7 +271,7 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 	 *
 	 */
 
-
+	// TODO
 
 
 
