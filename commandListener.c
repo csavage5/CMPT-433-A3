@@ -115,11 +115,11 @@ static void* listenerThread(void *arg) {
             //       amount if possible, reply with new volume
 
             if (strcmp("u", commands[1]) == 0) {
-                changeVolume(atoi(commands[2]), 1);
+                AudioMixer_setVolume(AudioMixer_getVolume() + atoi(commands[2]));
                 sprintf(pReply, "%d", AudioMixer_getVolume());
 
             } else if (strcmp("d", commands[1]) == 0) {
-                changeVolume(atoi(commands[2]), 0);
+                AudioMixer_setVolume(AudioMixer_getVolume() - atoi(commands[2]));
                 sprintf(pReply, "%d", AudioMixer_getVolume());
 
             }
@@ -129,9 +129,13 @@ static void* listenerThread(void *arg) {
             //       amount if possible, reply with new tempo
 
             if (strcmp("u", commands[1]) == 0) {
-                // TODO 
+                AudioMixer_setBPM(AudioMixer_getBPM() + atoi(commands[2]));
+                sprintf(pReply, "%d", AudioMixer_getVolume());
+
             } else if (strcmp("d", commands[1]) == 0) {
-                // TODO 
+                AudioMixer_setBPM(AudioMixer_getBPM() - atoi(commands[2]));
+                sprintf(pReply, "%d", AudioMixer_getVolume());
+                
             }
 
         } else if (strcmp("p", commands[0]) == 0) {

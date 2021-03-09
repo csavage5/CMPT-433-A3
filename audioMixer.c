@@ -8,9 +8,9 @@
 #include <limits.h>
 #include <alloca.h> // needed for mixer
 
-#define AUD_DRUM_HIGHHAT "wave-files/100062__menegass__gui-drum-tom-hi-hard.wav"
-#define AUD_DRUM_BASS "wave-files/100051__menegass__gui-drum-bd-hard.wav"
-#define AUD_DRUM_SNARE "wave-files/100058__menegass__gui-drum-snare-hard"
+#define AUD_DRUM_HIGHHAT "wave-files/high_hat_hard.wav"
+#define AUD_DRUM_BASS "wave-files/bass_hard.wav"
+#define AUD_DRUM_SNARE "wave-files/snare_hard.wav"
 
 static snd_pcm_t *handle;
 
@@ -171,11 +171,14 @@ void AudioMixer_queueSound(wavedata_t *pSound) {
 	 */
 
 	int searchStart = freeSpaceCursor;
+	int spaceCounter = 0;
+
+	pthread_mutex_lock(&mutSoundBites);
 
 	for (freeSpaceCursor; freeSpaceCursor < MAX_SOUND_BITES; freeSpaceCursor++) {
 		// search from space where the last pSound was placed
 		
-		pthread_mutex_lock(&mutSoundBites);
+		
 
 		if (soundBites[freeSpaceCursor].pSound == NULL) {
 			// CASE: found, add pSound to slot and return
@@ -185,11 +188,11 @@ void AudioMixer_queueSound(wavedata_t *pSound) {
 			freeSpaceCursor++;
 			return;
 		}
+
+		spaceCounter++;
 	}
-	pthread_mutex_unlock(&mutSoundBites);
 
 	for (freeSpaceCursor = 0; freeSpaceCursor < searchStart; freeSpaceCursor++) {
-		pthread_mutex_lock(&mutSoundBites);
 		// wrap around to the start and search
 		if (soundBites[freeSpaceCursor].pSound == NULL) {
 			// CASE: found, add pSound to slot and return
@@ -199,11 +202,12 @@ void AudioMixer_queueSound(wavedata_t *pSound) {
 			freeSpaceCursor++;
 			return;
 		}
+		spaceCounter++;
 	}
 	pthread_mutex_unlock(&mutSoundBites);
 
 	// CASE: no free space found, throw error
-	printf("ERROR: no free space found in soundBites for new pSound, skipping this sound\n");
+	printf("ERROR: soundBites contains %d active sounds, can't add new sound\n", spaceCounter);
 	
 }
 
@@ -247,13 +251,14 @@ int AudioMixer_getVolume() {
 // Written by user "trenki".
 void AudioMixer_setVolume(int newVolume) {
 	// Ensure volume is reasonable; If so, cache it for later getVolume() calls.
-	pthread_mutex_lock(&mutVolume);
-
+	
 	if (newVolume < AUDIOMIXER_MIN_VOLUME || newVolume > AUDIOMIXER_MAX_VOLUME) {
 		printf("ERROR: Volume must be between 0 and 100.\n");
-		pthread_mutex_unlock(&mutVolume);
 		return;
 	}
+
+	pthread_mutex_lock(&mutVolume);
+
 	volume = newVolume;
 
     long min, max;
@@ -280,6 +285,32 @@ void AudioMixer_setVolume(int newVolume) {
 	pthread_mutex_unlock(&mutVolume);
 }
 
+
+int AudioMixer_getBPM() {
+
+	int temp;
+	pthread_mutex_lock(&mutBPM);
+	{
+		temp = bpm;
+	}
+	pthread_mutex_unlock(&mutBPM);
+
+	return temp;
+
+}
+
+void AudioMixer_setBPM(int newBPM) {
+	if (newBPM < AUDIOMIXER_MIN_BPM || newBPM > AUDIOMIXER_MAX_BPM) {
+		printf("ERROR: BPM must be between 40 and 300.\n");
+		return;
+	}
+	
+	pthread_mutex_lock(&mutBPM);
+	{	
+		bpm = newBPM;
+	}
+	pthread_mutex_unlock(&mutBPM);
+}
 
 // Fill the playbackBuffer array with new PCM values to output.
 //    playbackBuffer: buffer to fill with new PCM data from sound bites.
@@ -333,27 +364,27 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 
 	// (2), (3)
 
-	for (int sampleNum = 0; sampleNum < playbackBufferSize; sampleNum++) {
+	for (int superPosNum = 0; superPosNum < playbackBufferSize; superPosNum++) {
 
 		pthread_mutex_lock(&mutSoundBites);
 
 		for (int i = 0; i < MAX_SOUND_BITES; i++) {
-			if ( soundBites[i].pSound != NULL) {
+			if (soundBites[i].pSound != NULL) {
 				// CASE: this soundBite has samples remaining
 				pSoundBite = &soundBites[i];
 				short sample = pSoundBite->pSound->pData[pSoundBite->location];
-				int currentBufferVal = playbackBuffer[sampleNum];
+				int currentBufferVal = playbackBuffer[superPosNum];
 
 				if (currentBufferVal + sample > SHRT_MAX) {
 					// CASE: overflow buffer, clamp to max
-					playbackBuffer[sampleNum] = SHRT_MAX;
+					playbackBuffer[superPosNum] = SHRT_MAX;
 
 				} else if (currentBufferVal + sample < SHRT_MIN) {
 					// CASE: underflow buffer, clamp to min
-					playbackBuffer[sampleNum] = SHRT_MIN;
+					playbackBuffer[superPosNum] = SHRT_MIN;
 
 				} else {
-					playbackBuffer[sampleNum] += pSoundBite->pSound->pData[pSoundBite->location];
+					playbackBuffer[superPosNum] += pSoundBite->pSound->pData[pSoundBite->location];
 				}
 
 
@@ -362,7 +393,9 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 				if (pSoundBite->location == pSoundBite->pSound->numSamples) {
 					// CASE: added last sample of current soundBite 
 					//       to playbackBuffer, remove from soundBites[]
-					AudioMixer_freeWaveFileData(pSoundBite->pSound);
+					pSoundBite->pSound = NULL;
+					pSoundBite->location = 0;
+					//AudioMixer_freeWaveFileData(pSoundBite->pSound);
 				}
 			}
 
@@ -391,8 +424,8 @@ void* enqueueBeatThread(void* arg) {
 
 		switch (beatCounter) {
 			case 10:
-				AudioMixer_queueSound(&dBass);
 				AudioMixer_queueSound(&dHH);
+				//AudioMixer_queueSound(&dBass);
 				break;
 
 			case 15:
@@ -413,12 +446,13 @@ void* enqueueBeatThread(void* arg) {
 		}
 
 		//Time For Half Beat [sec] = 60 [sec/min] / BPM / 2 [half-beats per beat]
-		//beatDelay.tv_nsec = // TODO float division
+		beatDelay.tv_nsec = (60.0f / AudioMixer_getBPM() / 2) * 1000000000;
+		//printf("Waiting for %ld nanoseconds...\n", beatDelay.tv_nsec);
 		
-		//nanosleep(); // wait for next beat
+		nanosleep(&beatDelay, NULL); // wait for next beat
 		
 		if (beatCounter == 25) {
-			beatCounter = 1;
+			beatCounter = 10;
 		} else {
 			beatCounter += 5;
 		}
