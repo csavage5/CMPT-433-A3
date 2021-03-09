@@ -8,11 +8,11 @@
 #include <limits.h>
 #include <alloca.h> // needed for mixer
 
-static pthread_mutex_t mutVolume = PTHREAD_MUTEX_INITIALIZER;
+#define AUD_DRUM_HIGHHAT "wave-files/100062__menegass__gui-drum-tom-hi-hard.wav"
+#define AUD_DRUM_BASS "wave-files/100051__menegass__gui-drum-bd-hard.wav"
+#define AUD_DRUM_SNARE "wave-files/100058__menegass__gui-drum-snare-hard"
 
 static snd_pcm_t *handle;
-
-#define DEFAULT_VOLUME 80
 
 #define SAMPLE_RATE 44100
 #define NUM_CHANNELS 1
@@ -37,25 +37,32 @@ typedef struct {
 	int location;
 } playbackSound_t;
 static playbackSound_t soundBites[MAX_SOUND_BITES];
-
+static int freeSpaceCursor = 0;
 // Playback threading
 void* playbackThread(void* arg);
 static _Bool stopping = false;
 static pthread_t playbackThreadId;
 static pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
 
-static int volume = 0;
+static pthread_mutex_t mutVolume = PTHREAD_MUTEX_INITIALIZER;
+static int volume = DEFAULT_VOLUME;
 
-void AudioMixer_init(void)
-{
+static pthread_mutex_t mutBPM = PTHREAD_MUTEX_INITIALIZER;
+static int bpm = DEFAULT_BPM;
+
+void AudioMixer_init(void) {
 	AudioMixer_setVolume(DEFAULT_VOLUME);
 
 	// Initialize the currently active sound-bites being played
 	// REVISIT:- Implement this. Hint: set the pSound pointer to NULL for each
 	//     sound bite.
-
 	// TODO
 
+	for (int i = 0; i < MAX_SOUND_BITES; i++) {
+		soundBites[i].pSound = NULL;
+		soundBites[i].location = 0;
+	}
+	
 
 	// Open the PCM output
 	int err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
@@ -91,8 +98,7 @@ void AudioMixer_init(void)
 
 
 // Client code must call AudioMixer_freeWaveFileData to free dynamically allocated data.
-void AudioMixer_readWaveFileIntoMemory(char *fileName, wavedata_t *pSound)
-{
+void AudioMixer_readWaveFileIntoMemory(char *fileName, wavedata_t *pSound) {
 	assert(pSound);
 
 	// The PCM data in a wave file starts after the header:
@@ -130,15 +136,13 @@ void AudioMixer_readWaveFileIntoMemory(char *fileName, wavedata_t *pSound)
 	}
 }
 
-void AudioMixer_freeWaveFileData(wavedata_t *pSound)
-{
+void AudioMixer_freeWaveFileData(wavedata_t *pSound) {
 	pSound->numSamples = 0;
 	free(pSound->pData);
 	pSound->pData = NULL;
 }
 
-void AudioMixer_queueSound(wavedata_t *pSound)
-{
+void AudioMixer_queueSound(wavedata_t *pSound) {
 	// Ensure we are only being asked to play "good" sounds:
 	assert(pSound->numSamples > 0);
 	assert(pSound->pData);
@@ -156,15 +160,37 @@ void AudioMixer_queueSound(wavedata_t *pSound)
 	 *    because the application most likely doesn't want to crash just for
 	 *    not being able to play another wave file.
 	 */
-
-
 	// TODO
 
+	int searchStart = freeSpaceCursor;
 
+	for (freeSpaceCursor; freeSpaceCursor < MAX_SOUND_BITES; freeSpaceCursor++) {
+		// search from space where the last pSound was placed
+		if (soundBites[freeSpaceCursor].pSound == NULL) {
+			// CASE: found, add pSound to slot and return
+			soundBites[freeSpaceCursor].pSound = pSound;
+			freeSpaceCursor++;
+			return;
+		}
+
+	}
+
+	for (freeSpaceCursor = 0; freeSpaceCursor < searchStart; freeSpaceCursor++) {
+		// wrap around to the start and search
+		if (soundBites[freeSpaceCursor].pSound == NULL) {
+			// CASE: found, add pSound to slot and return
+			soundBites[freeSpaceCursor].pSound = pSound;
+			freeSpaceCursor++;
+			return;
+		}
+	}
+
+	// CASE: no free space found, throw error
+	printf("ERROR: no free space found in soundBites for new pSound, skipping this sound\n");
+	
 }
 
-void AudioMixer_cleanup(void)
-{
+void AudioMixer_cleanup(void) {
 	printf("Stopping audio...\n");
 
 	// Stop the PCM generation thread
@@ -241,8 +267,7 @@ void AudioMixer_setVolume(int newVolume) {
 // Fill the playbackBuffer array with new PCM values to output.
 //    playbackBuffer: buffer to fill with new PCM data from sound bites.
 //    size: the number of values to store into playbackBuffer
-static void fillPlaybackBuffer(short *playbackBuffer, int size)
-{
+static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 	/*
 	 * REVISIT: Implement this
 	 * 1. Wipe the playbackBuffer to all 0's to clear any previous PCM data.
@@ -293,8 +318,7 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 }
 
 
-void* playbackThread(void* arg)
-{
+void* playbackThread(void* arg) {
 
 	while (!stopping) {
 		// Generate next block of audio
