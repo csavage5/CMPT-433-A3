@@ -8,7 +8,7 @@
 #include <limits.h>
 #include <alloca.h> // needed for mixer
 
-#define AUD_DRUM_HIGHHAT "wave-files/high_hat_hard.wav"
+#define AUD_DRUM_HIGHHAT "wave-files/high_hat_closed.wav"
 #define AUD_DRUM_BASS "wave-files/bass_hard.wav"
 #define AUD_DRUM_SNARE "wave-files/snare_hard.wav"
 
@@ -177,8 +177,6 @@ void AudioMixer_queueSound(wavedata_t *pSound) {
 
 	for (freeSpaceCursor; freeSpaceCursor < MAX_SOUND_BITES; freeSpaceCursor++) {
 		// search from space where the last pSound was placed
-		
-		
 
 		if (soundBites[freeSpaceCursor].pSound == NULL) {
 			// CASE: found, add pSound to slot and return
@@ -357,10 +355,9 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 	 *
 	 */
 
-	// TODO
 	playbackSound_t *pSoundBite = NULL;
 	// (1)
-	memset(playbackBuffer, 0, playbackBufferSize);
+	memset(playbackBuffer, 0, playbackBufferSize * SAMPLE_SIZE);
 
 	// (2), (3)
 
@@ -372,7 +369,7 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 			if (soundBites[i].pSound != NULL) {
 				// CASE: this soundBite has samples remaining
 				pSoundBite = &soundBites[i];
-				short sample = pSoundBite->pSound->pData[pSoundBite->location];
+				int sample = pSoundBite->pSound->pData[pSoundBite->location];
 				int currentBufferVal = playbackBuffer[superPosNum];
 
 				if (currentBufferVal + sample > SHRT_MAX) {
@@ -419,13 +416,13 @@ void* enqueueBeatThread(void* arg) {
 	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_HIGHHAT, &dHH);
 	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_SNARE, &dSnare);
 
-	//beatDelay.
+	
 	while (1) {	
 
 		switch (beatCounter) {
 			case 10:
 				AudioMixer_queueSound(&dHH);
-				//AudioMixer_queueSound(&dBass);
+				AudioMixer_queueSound(&dBass);
 				break;
 
 			case 15:
