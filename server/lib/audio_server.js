@@ -2,18 +2,35 @@
  * Respond to commands over a websocket to do math
  */
 
+const { SSL_OP_EPHEMERAL_RSA } = require('constants');
 var dgram = require('dgram');
 var client = dgram.createSocket('udp4');
 var timeClient = dgram.createSocket('udp4');
 
 var socketio = require('socket.io');
 var io;
+var newTime = '00:00:00';
+var currentTime = '00:00:00';
+var timeout = false;
 
 // handle incoming UDP
 client.on('listening', () => {
     const address = client.address();
     console.log(`server listening on ${address.address}:${address.port}`);
 })
+
+timeClient.on('listening', () => {
+    const address = timeClient.address();
+    console.log(`server listening on ${address.address}:${address.port}`);
+    });
+
+timeClient.on('message', (msg, senderInfo) => {
+    // Translate from byte array to string
+    msg = String.fromCharCode.apply(null,msg);
+    newTime = msg;
+    clearTimeout(bbgErrorTimer);
+    timeout = false;
+});
 
 exports.listen = function(server) {
 	io = socketio.listen(server);
@@ -99,16 +116,23 @@ function handleCommand(socket) {
 
     socket.on('timeRequest', function(){
         timeClient.send('q uptime',12345, 'localhost');
-		timeClient.on('message', (msg, senderInfo) => {
-            // Translate from byte array to string
-            msg = String.fromCharCode.apply(null,msg);
-            socket.emit('uptime', msg);
-        });
+		updateTime(socket)
+        if(timeout == false){
+            bbgErrorTimer = setTimeout(function() {
+                    socket.emit('backendTimeout');
+                    timeout = true;
+            }, 3000);
+        }
     });
 }
 
-timeClient.on('listening', () => {
-    const address = timeClient.address();
-    console.log(`server listening on ${address.address}:${address.port}`);
-    });
-
+function updateTime(socket) {
+    // hopefully temp fix, send request for new time, 
+    // wait 200ms for update then send current time
+    setTimeout(function() {
+        if(currentTime != newTime){
+            currentTime = newTime;
+            socket.emit('uptime', currentTime);
+        }
+    }, 100);
+}

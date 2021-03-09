@@ -40,3 +40,11 @@ h1, h2 {
 	margin-top: 20px;
 	display: none;
 }
+
+#error1 {
+	display: none;
+}
+
+#error2 {
+	display: none;
+}
