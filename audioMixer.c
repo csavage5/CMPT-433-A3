@@ -37,7 +37,9 @@ typedef struct {
 	int location;
 } playbackSound_t;
 static playbackSound_t soundBites[MAX_SOUND_BITES];
+static pthread_mutex_t mutSoundBites = PTHREAD_MUTEX_INITIALIZER;
 static int freeSpaceCursor = 0;
+
 // Playback threading
 void* playbackThread(void* arg);
 static _Bool stopping = false;
@@ -160,30 +162,38 @@ void AudioMixer_queueSound(wavedata_t *pSound) {
 	 *    because the application most likely doesn't want to crash just for
 	 *    not being able to play another wave file.
 	 */
-	// TODO
 
 	int searchStart = freeSpaceCursor;
 
 	for (freeSpaceCursor; freeSpaceCursor < MAX_SOUND_BITES; freeSpaceCursor++) {
 		// search from space where the last pSound was placed
+		
+		pthread_mutex_lock(&mutSoundBites);
+
 		if (soundBites[freeSpaceCursor].pSound == NULL) {
 			// CASE: found, add pSound to slot and return
 			soundBites[freeSpaceCursor].pSound = pSound;
+			pthread_mutex_unlock(&mutSoundBites);
+
 			freeSpaceCursor++;
 			return;
 		}
-
 	}
+	pthread_mutex_unlock(&mutSoundBites);
 
 	for (freeSpaceCursor = 0; freeSpaceCursor < searchStart; freeSpaceCursor++) {
+		pthread_mutex_lock(&mutSoundBites);
 		// wrap around to the start and search
 		if (soundBites[freeSpaceCursor].pSound == NULL) {
 			// CASE: found, add pSound to slot and return
 			soundBites[freeSpaceCursor].pSound = pSound;
+			pthread_mutex_unlock(&mutSoundBites);
+
 			freeSpaceCursor++;
 			return;
 		}
 	}
+	pthread_mutex_unlock(&mutSoundBites);
 
 	// CASE: no free space found, throw error
 	printf("ERROR: no free space found in soundBites for new pSound, skipping this sound\n");
@@ -310,15 +320,59 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 	 */
 
 	// TODO
+	playbackSound_t *pSoundBite = NULL;
+	// (1)
+	memset(playbackBuffer, 0, playbackBufferSize);
+
+	// (2), (3)
+
+	for (int sampleNum = 0; sampleNum < playbackBufferSize; sampleNum++) {
+
+		pthread_mutex_lock(&mutSoundBites);
+
+		for (int i = 0; i < MAX_SOUND_BITES; i++) {
+			if ( soundBites[i].pSound != NULL) {
+				// CASE: this soundBite has samples remaining
+				pSoundBite = &soundBites[i];
+				short sample = pSoundBite->pSound->pData[pSoundBite->location];
+				int currentBufferVal = playbackBuffer[sampleNum];
+
+				if (currentBufferVal + sample > SHRT_MAX) {
+					// CASE: overflow buffer, clamp to max
+					playbackBuffer[sampleNum] = SHRT_MAX;
+
+				} else if (currentBufferVal + sample < SHRT_MIN) {
+					// CASE: underflow buffer, clamp to min
+					playbackBuffer[sampleNum] = SHRT_MIN;
+
+				} else {
+					playbackBuffer[sampleNum] += pSoundBite->pSound->pData[pSoundBite->location];
+				}
 
 
+				pSoundBite->location++;
 
+				if (pSoundBite->location == pSoundBite->pSound->numSamples) {
+					// CASE: added last sample of current soundBite 
+					//       to playbackBuffer, remove from soundBites[]
+					AudioMixer_freeWaveFileData(pSoundBite->pSound);
+				}
+			}
 
+		}
+
+		pthread_mutex_unlock(&mutSoundBites);
+
+	}
 
 }
 
 
 void* playbackThread(void* arg) {
+
+	// each fillPlaybackBuffer call will fill 0.05 seconds of time => 
+	// each loop takes a half-beat of time - find out how 
+	// many seconds each half-beat is relative to current BPM
 
 	while (!stopping) {
 		// Generate next block of audio
