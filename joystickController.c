@@ -44,24 +44,21 @@ static void* listenerThread(void *arg) {
 
         switch (detectDirection()) {
             case UP:
-                // TODO UP: volume +5
-                if (AudioMixer_getVolume() + 5 <= AUDIOMIXER_MAX_VOLUME) {
-                    AudioMixer_setVolume(AudioMixer_getVolume() + 5);
-                    printf("[joystickController] set VOL: %d\n", AudioMixer_getVolume());
-                }
+                AudioMixer_setVolume(AudioMixer_getVolume() + 5);
+                printf("[joystickController] set VOL: %d\n", AudioMixer_getVolume());
                 break;
             case DOWN:
-                // TODO DOWN: volume -5
-                if (AudioMixer_getVolume() - 5 >= AUDIOMIXER_MIN_VOLUME) {
-                    AudioMixer_setVolume(AudioMixer_getVolume() - 5);
-                    printf("[joystickController] set VOL: %d\n", AudioMixer_getVolume());
-                }
+                AudioMixer_setVolume(AudioMixer_getVolume() - 5);
+                printf("[joystickController] set VOL: %d\n", AudioMixer_getVolume());
                 break;
             case LEFT:
                 // TODO LEFT: BPM -5
+                AudioMixer_setBPM(AudioMixer_getBPM() - 5);
+                printf("[joystickController] set BPM: %d\n", AudioMixer_getBPM());
                 break;
             case RIGHT:
-                // TODO RIGHT: BPM +5
+                AudioMixer_setBPM(AudioMixer_getBPM() + 5);
+                printf("[joystickController] set BPM: %d\n", AudioMixer_getBPM());
                 break;
             case PUSHED:
                 // TODO PUSHED: cycle through beat modes

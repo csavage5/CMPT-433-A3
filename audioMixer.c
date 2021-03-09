@@ -8,11 +8,11 @@
 #include <limits.h>
 #include <alloca.h> // needed for mixer
 
-static pthread_mutex_t mutVolume = PTHREAD_MUTEX_INITIALIZER;
+#define AUD_DRUM_HIGHHAT "wave-files/high_hat_closed.wav"
+#define AUD_DRUM_BASS "wave-files/bass_hard.wav"
+#define AUD_DRUM_SNARE "wave-files/snare_hard.wav"
 
 static snd_pcm_t *handle;
-
-#define DEFAULT_VOLUME 80
 
 #define SAMPLE_RATE 44100
 #define NUM_CHANNELS 1
@@ -37,6 +37,8 @@ typedef struct {
 	int location;
 } playbackSound_t;
 static playbackSound_t soundBites[MAX_SOUND_BITES];
+static pthread_mutex_t mutSoundBites = PTHREAD_MUTEX_INITIALIZER;
+static int freeSpaceCursor = 0;
 
 // Playback threading
 void* playbackThread(void* arg);
@@ -44,18 +46,30 @@ static _Bool stopping = false;
 static pthread_t playbackThreadId;
 static pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
 
-static int volume = 0;
+// Beat threading
+void* enqueueBeatThread(void* arg);
+static pthread_t enqueueBeatThreadId;
 
-void AudioMixer_init(void)
-{
+
+static pthread_mutex_t mutVolume = PTHREAD_MUTEX_INITIALIZER;
+static int volume = DEFAULT_VOLUME;
+
+static pthread_mutex_t mutBPM = PTHREAD_MUTEX_INITIALIZER;
+static int bpm = DEFAULT_BPM;
+
+void AudioMixer_init(void) {
 	AudioMixer_setVolume(DEFAULT_VOLUME);
 
 	// Initialize the currently active sound-bites being played
 	// REVISIT:- Implement this. Hint: set the pSound pointer to NULL for each
 	//     sound bite.
-
 	// TODO
 
+	for (int i = 0; i < MAX_SOUND_BITES; i++) {
+		soundBites[i].pSound = NULL;
+		soundBites[i].location = 0;
+	}
+	
 
 	// Open the PCM output
 	int err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
@@ -87,12 +101,13 @@ void AudioMixer_init(void)
 
 	// Launch playback thread:
 	pthread_create(&playbackThreadId, NULL, playbackThread, NULL);
+	// Launch beat thread:
+	pthread_create(&enqueueBeatThreadId, NULL, enqueueBeatThread, NULL);
 }
 
 
 // Client code must call AudioMixer_freeWaveFileData to free dynamically allocated data.
-void AudioMixer_readWaveFileIntoMemory(char *fileName, wavedata_t *pSound)
-{
+void AudioMixer_readWaveFileIntoMemory(char *fileName, wavedata_t *pSound) {
 	assert(pSound);
 
 	// The PCM data in a wave file starts after the header:
@@ -130,15 +145,13 @@ void AudioMixer_readWaveFileIntoMemory(char *fileName, wavedata_t *pSound)
 	}
 }
 
-void AudioMixer_freeWaveFileData(wavedata_t *pSound)
-{
+void AudioMixer_freeWaveFileData(wavedata_t *pSound) {
 	pSound->numSamples = 0;
 	free(pSound->pData);
 	pSound->pData = NULL;
 }
 
-void AudioMixer_queueSound(wavedata_t *pSound)
-{
+void AudioMixer_queueSound(wavedata_t *pSound) {
 	// Ensure we are only being asked to play "good" sounds:
 	assert(pSound->numSamples > 0);
 	assert(pSound->pData);
@@ -157,14 +170,46 @@ void AudioMixer_queueSound(wavedata_t *pSound)
 	 *    not being able to play another wave file.
 	 */
 
+	int searchStart = freeSpaceCursor;
+	int spaceCounter = 0;
 
-	// TODO
+	pthread_mutex_lock(&mutSoundBites);
 
+	for (freeSpaceCursor; freeSpaceCursor < MAX_SOUND_BITES; freeSpaceCursor++) {
+		// search from space where the last pSound was placed
 
+		if (soundBites[freeSpaceCursor].pSound == NULL) {
+			// CASE: found, add pSound to slot and return
+			soundBites[freeSpaceCursor].pSound = pSound;
+			pthread_mutex_unlock(&mutSoundBites);
+
+			freeSpaceCursor++;
+			return;
+		}
+
+		spaceCounter++;
+	}
+
+	for (freeSpaceCursor = 0; freeSpaceCursor < searchStart; freeSpaceCursor++) {
+		// wrap around to the start and search
+		if (soundBites[freeSpaceCursor].pSound == NULL) {
+			// CASE: found, add pSound to slot and return
+			soundBites[freeSpaceCursor].pSound = pSound;
+			pthread_mutex_unlock(&mutSoundBites);
+
+			freeSpaceCursor++;
+			return;
+		}
+		spaceCounter++;
+	}
+	pthread_mutex_unlock(&mutSoundBites);
+
+	// CASE: no free space found, throw error
+	printf("ERROR: soundBites contains %d active sounds, can't add new sound\n", spaceCounter);
+	
 }
 
-void AudioMixer_cleanup(void)
-{
+void AudioMixer_cleanup(void) {
 	printf("Stopping audio...\n");
 
 	// Stop the PCM generation thread
@@ -204,13 +249,14 @@ int AudioMixer_getVolume() {
 // Written by user "trenki".
 void AudioMixer_setVolume(int newVolume) {
 	// Ensure volume is reasonable; If so, cache it for later getVolume() calls.
-	pthread_mutex_lock(&mutVolume);
-
+	
 	if (newVolume < AUDIOMIXER_MIN_VOLUME || newVolume > AUDIOMIXER_MAX_VOLUME) {
 		printf("ERROR: Volume must be between 0 and 100.\n");
-		pthread_mutex_unlock(&mutVolume);
 		return;
 	}
+
+	pthread_mutex_lock(&mutVolume);
+
 	volume = newVolume;
 
     long min, max;
@@ -238,11 +284,36 @@ void AudioMixer_setVolume(int newVolume) {
 }
 
 
+int AudioMixer_getBPM() {
+
+	int temp;
+	pthread_mutex_lock(&mutBPM);
+	{
+		temp = bpm;
+	}
+	pthread_mutex_unlock(&mutBPM);
+
+	return temp;
+
+}
+
+void AudioMixer_setBPM(int newBPM) {
+	if (newBPM < AUDIOMIXER_MIN_BPM || newBPM > AUDIOMIXER_MAX_BPM) {
+		printf("ERROR: BPM must be between 40 and 300.\n");
+		return;
+	}
+	
+	pthread_mutex_lock(&mutBPM);
+	{	
+		bpm = newBPM;
+	}
+	pthread_mutex_unlock(&mutBPM);
+}
+
 // Fill the playbackBuffer array with new PCM values to output.
 //    playbackBuffer: buffer to fill with new PCM data from sound bites.
 //    size: the number of values to store into playbackBuffer
-static void fillPlaybackBuffer(short *playbackBuffer, int size)
-{
+static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 	/*
 	 * REVISIT: Implement this
 	 * 1. Wipe the playbackBuffer to all 0's to clear any previous PCM data.
@@ -284,17 +355,116 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size)
 	 *
 	 */
 
-	// TODO
+	playbackSound_t *pSoundBite = NULL;
+	// (1)
+	memset(playbackBuffer, 0, playbackBufferSize * SAMPLE_SIZE);
+
+	// (2), (3)
+
+	for (int superPosNum = 0; superPosNum < playbackBufferSize; superPosNum++) {
+
+		pthread_mutex_lock(&mutSoundBites);
+
+		for (int i = 0; i < MAX_SOUND_BITES; i++) {
+			if (soundBites[i].pSound != NULL) {
+				// CASE: this soundBite has samples remaining
+				pSoundBite = &soundBites[i];
+				int sample = pSoundBite->pSound->pData[pSoundBite->location];
+				int currentBufferVal = playbackBuffer[superPosNum];
+
+				if (currentBufferVal + sample > SHRT_MAX) {
+					// CASE: overflow buffer, clamp to max
+					playbackBuffer[superPosNum] = SHRT_MAX;
+
+				} else if (currentBufferVal + sample < SHRT_MIN) {
+					// CASE: underflow buffer, clamp to min
+					playbackBuffer[superPosNum] = SHRT_MIN;
+
+				} else {
+					playbackBuffer[superPosNum] += pSoundBite->pSound->pData[pSoundBite->location];
+				}
 
 
+				pSoundBite->location++;
 
+				if (pSoundBite->location == pSoundBite->pSound->numSamples) {
+					// CASE: added last sample of current soundBite 
+					//       to playbackBuffer, remove from soundBites[]
+					pSoundBite->pSound = NULL;
+					pSoundBite->location = 0;
+					//AudioMixer_freeWaveFileData(pSoundBite->pSound);
+				}
+			}
 
+		}
+
+		pthread_mutex_unlock(&mutSoundBites);
+
+	}
 
 }
 
+void* enqueueBeatThread(void* arg) {
+	int beatCounter = 10; // i.e. 1.0, 1.5, 2.0, 2.5, ...
+	struct timespec beatDelay;
 
-void* playbackThread(void* arg)
-{
+	wavedata_t dBass;
+	wavedata_t dHH;
+	wavedata_t dSnare;
+	
+	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_BASS, &dBass);
+	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_HIGHHAT, &dHH);
+	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_SNARE, &dSnare);
+
+	
+	while (1) {	
+
+		switch (beatCounter) {
+			case 10:
+				AudioMixer_queueSound(&dHH);
+				AudioMixer_queueSound(&dBass);
+				break;
+
+			case 15:
+				AudioMixer_queueSound(&dHH);
+				break;
+
+			case 20:
+				AudioMixer_queueSound(&dHH);
+				AudioMixer_queueSound(&dSnare);
+				break;
+
+			case 25:
+				AudioMixer_queueSound(&dHH);
+				break;
+			
+			default:
+				break;
+		}
+
+		//Time For Half Beat [sec] = 60 [sec/min] / BPM / 2 [half-beats per beat]
+		beatDelay.tv_nsec = (60.0f / AudioMixer_getBPM() / 2) * 1000000000;
+		//printf("Waiting for %ld nanoseconds...\n", beatDelay.tv_nsec);
+		
+		nanosleep(&beatDelay, NULL); // wait for next beat
+		
+		if (beatCounter == 25) {
+			beatCounter = 10;
+		} else {
+			beatCounter += 5;
+		}
+
+	}
+
+	return NULL;
+
+}
+
+void* playbackThread(void* arg) {
+
+	// each fillPlaybackBuffer call will fill 0.05 seconds of time => 
+	// each loop takes a half-beat of time - find out how 
+	// many seconds each half-beat is relative to current BPM
 
 	while (!stopping) {
 		// Generate next block of audio

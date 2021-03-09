@@ -11,13 +11,15 @@ $(document).ready(function() {
 	socket.on('daResponse', function(result) {
 		console.log(result);
 		clearTimeout(errorTimer);
-		document.getElementById("error-box").style.display = "none";
+		document.getElementById('error-box').style.display = 'none';
+		document.getElementById('error1').style.display = 'none';
 	});
 
 	socket.on('uptime', function(result) {
-		$('#timer').html(result);
+		$('#timer').html(result + '(H:M:S)');
 		clearTimeout(errorTimer);
-		document.getElementById("error-box").style.display = "none";
+		document.getElementById('error-box').style.display = 'none';
+		document.getElementById('error2').style.display = 'none';
 	});
 
 	socket.on('volumeControl', function(result) {
@@ -25,22 +27,26 @@ $(document).ready(function() {
 		document.getElementById('volumeid').value = result;
 	});
 
+	socket.on('backendTimeout', function() {
+		console.log('Backend is not responding, check that it is running')
+		document.getElementById('error-box').style.display = 'block';
+		document.getElementById('error2').style.display = 'block';
+	})
+
 	window.setInterval(function() {updateTime()}, 1000);
 });
 
 function setErrorTimer() {
 	errorTimer = setTimeout(function() {
-		socket.emit("serverTimeout", "Connection timeout to server");
-		console.log("Server did not respond in time. Ensure server.js is running")
-		document.getElementById("error-box").style.display = "block";
-	}, 5000);
+		socket.emit('serverTimeout', 'Connection timeout to server');
+		console.log('Server did not respond in time. Ensure server.js is running')
+		document.getElementById('error-box').style.display = 'block';
+		document.getElementById('error1').style.display = 'block';
+	}, 3000);
 }
 
 function updateTime() {
 	socket.emit('timeRequest');
-
-	// var timeStr = hours + ':' + minutes + ':' + seconds + "(H:M:S)";
-	// $('#timer').html(timeStr);
 }
 
 function setModeNone() {
