@@ -18,7 +18,7 @@
 
 // Prototypes
 int initI2cBus(char* bus, int address);
-void readI2cReg(int i2cFileDesc, unsigned char regAddr);
+void readI2cReg(int i2cFileDesc);
 
 int main(){
 
@@ -29,10 +29,9 @@ int main(){
     long nanoseconds = 10000000;
     struct timespec reqDelay = {seconds, nanoseconds};
     while(1) {
-        readI2cReg(i2cFileDesc, REG_WHO_AM_I);  
+        readI2cReg(i2cFileDesc);  
         nanosleep(&reqDelay, (struct timespec *) NULL);
-    }
-    readI2cReg(i2cFileDesc, REG_WHO_AM_I);   
+    }  
 
     // Cleanup I2C access
     close(i2cFileDesc);
@@ -62,7 +61,7 @@ int initI2cBus(char* bus, int address){
     return i2cFileDesc;
 }
 
-void readI2cReg(int i2cFileDesc, unsigned char regAddr){
+void readI2cReg(int i2cFileDesc){
 	long seconds = 1;
     long nanoseconds = 0;
     struct timespec reqDelay = {seconds, nanoseconds};
@@ -97,14 +96,17 @@ void readI2cReg(int i2cFileDesc, unsigned char regAddr){
 		// printf("Acceleration in Y-Axis : %d \n", yAccl);
 		// printf("Acceleration in Z-Axis : %d \n\n\n", zAccl);
 		if(xAccl > 500 || xAccl < -300) {
+			// TODO PLAY SOUND FUNCTION HERE
 			printf("play x-axis sound\n");
 			nanosleep(&reqDelay, (struct timespec *) NULL);
 		}
 		if(yAccl > 500 || yAccl < -300) {
+			// TODO PLAY SOUND FUNCTION HERE
 			printf("play y-axis sound\n");
 			nanosleep(&reqDelay, (struct timespec *) NULL);
 		}
 		if(zAccl > 1300|| zAccl < 800) {
+			// TODO PLAY SOUND FUNCTION HERE
 			printf("play z-axis sound\n");
 			nanosleep(&reqDelay, (struct timespec *) NULL);
 		}
