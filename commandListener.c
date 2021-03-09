@@ -166,9 +166,7 @@ static void* listenerThread(void *arg) {
 }
 
 static void detectCommands() {
-
-    // TODO modify for new command structure
-
+    
     int i = 0;
     char *newline = 0;
     char *token = NULL;

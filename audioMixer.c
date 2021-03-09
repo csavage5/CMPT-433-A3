@@ -46,6 +46,11 @@ static _Bool stopping = false;
 static pthread_t playbackThreadId;
 static pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
 
+// Beat threading
+void* enqueueBeatThread(void* arg);
+static pthread_t enqueueBeatThreadId;
+
+
 static pthread_mutex_t mutVolume = PTHREAD_MUTEX_INITIALIZER;
 static int volume = DEFAULT_VOLUME;
 
@@ -96,6 +101,8 @@ void AudioMixer_init(void) {
 
 	// Launch playback thread:
 	pthread_create(&playbackThreadId, NULL, playbackThread, NULL);
+	// Launch beat thread:
+	pthread_create(&enqueueBeatThreadId, NULL, enqueueBeatThread, NULL);
 }
 
 
@@ -367,6 +374,60 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 
 }
 
+void* enqueueBeatThread(void* arg) {
+	int beatCounter = 10; // i.e. 1.0, 1.5, 2.0, 2.5, ...
+	struct timespec beatDelay;
+
+	wavedata_t dBass;
+	wavedata_t dHH;
+	wavedata_t dSnare;
+	
+	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_BASS, &dBass);
+	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_HIGHHAT, &dHH);
+	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_SNARE, &dSnare);
+
+	//beatDelay.
+	while (1) {	
+
+		switch (beatCounter) {
+			case 10:
+				AudioMixer_queueSound(&dBass);
+				AudioMixer_queueSound(&dHH);
+				break;
+
+			case 15:
+				AudioMixer_queueSound(&dHH);
+				break;
+
+			case 20:
+				AudioMixer_queueSound(&dHH);
+				AudioMixer_queueSound(&dSnare);
+				break;
+
+			case 25:
+				AudioMixer_queueSound(&dHH);
+				break;
+			
+			default:
+				break;
+		}
+
+		//Time For Half Beat [sec] = 60 [sec/min] / BPM / 2 [half-beats per beat]
+		//beatDelay.tv_nsec = // TODO float division
+		
+		//nanosleep(); // wait for next beat
+		
+		if (beatCounter == 25) {
+			beatCounter = 1;
+		} else {
+			beatCounter += 5;
+		}
+
+	}
+
+	return NULL;
+
+}
 
 void* playbackThread(void* arg) {
 
