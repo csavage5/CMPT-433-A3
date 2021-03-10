@@ -12,8 +12,6 @@
 #define AUD_DRUM_BASS "wave-files/bass_hard.wav"
 #define AUD_DRUM_SNARE "wave-files/snare_hard.wav"
 
-
-
 static snd_pcm_t *handle;
 
 #define SAMPLE_RATE 44100
@@ -221,6 +219,26 @@ void AudioMixer_queueSound(wavedata_t *pSound) {
 	printf("ERROR: soundBites contains %d active sounds, can't add new sound\n", spaceCounter);
 	
 }
+
+void AudioMixer_playSound(enum drum drumSound) {
+	switch (drumSound) {
+		case HIGHHAT:
+			AudioMixer_queueSound(&dHH);
+			break;
+
+		case BASS:
+			AudioMixer_queueSound(&dBass);
+			break;
+
+		case SNARE:
+			AudioMixer_queueSound(&dSnare);
+			break;
+		
+		default:
+			break;
+	}
+}
+
 
 void AudioMixer_cleanup(void) {
 	printf("Stopping audio...\n");

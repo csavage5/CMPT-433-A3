@@ -142,7 +142,15 @@ static void* listenerThread(void *arg) {
             // CASE: server sent "p" - play drum or beat sound
 
             if (strcmp("drum", commands[1]) == 0) {
-                // TODO 
+                if (strcmp("hh", commands[2]) == 0) {
+                    AudioMixer_playSound(HIGHHAT);
+                } else if (strcmp("snare", commands[2]) == 0) {
+                    AudioMixer_playSound(SNARE);
+                } else if (strcmp("bass", commands[2]) == 0) {
+                    AudioMixer_playSound(BASS);
+                }
+
+
             } else if (strcmp("beat", commands[1]) == 0) {
                 AudioMixer_changeBeat(atoi(commands[2]));
             } 

@@ -8,6 +8,9 @@ typedef struct {
 	short *pData;
 } wavedata_t;
 
+enum beat {NO_BEAT, BEAT1, BEAT2};
+enum drum {HIGHHAT, SNARE, BASS};
+
 #define DEFAULT_VOLUME 80
 #define AUDIOMIXER_MAX_VOLUME 100
 #define AUDIOMIXER_MIN_VOLUME 0
@@ -39,7 +42,8 @@ void AudioMixer_setVolume(int newVolume);
 int AudioMixer_getBPM();
 void AudioMixer_setBPM(int newBPM);
 
-enum beat {NO_BEAT, BEAT1, BEAT2};
 void AudioMixer_changeBeat(enum beat newBeat);
 enum beat AudioMixer_getBeat();
+
+void AudioMixer_playSound(enum drum drumSound);
 #endif
