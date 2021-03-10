@@ -1,12 +1,13 @@
 // Incomplete implementation of an audio mixer. Search for "REVISIT" to find things
 // which are left as incomplete.
 // Note: Generates low latency audio on BeagleBone Black; higher latency found on host.
-#include "audioMixer.h"
 #include <alsa/asoundlib.h>
 #include <stdbool.h>
 #include <pthread.h>
 #include <limits.h>
 #include <alloca.h> // needed for mixer
+
+#include "audioMixer.h"
 
 #define AUD_DRUM_HIGHHAT "wave-files/high_hat_closed.wav"
 #define AUD_DRUM_BASS "wave-files/bass_hard.wav"
@@ -44,7 +45,6 @@ static int freeSpaceCursor = 0;
 void* playbackThread(void* arg);
 static _Bool stopping = false;
 static pthread_t playbackThreadId;
-static pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Beat threading
 void* enqueueBeatThread(void* arg);
@@ -58,8 +58,8 @@ struct timespec beatDelay;
 wavedata_t dBass;
 wavedata_t dHH;
 wavedata_t dSnare;
-void playBeat1(int beatCounter);
-void playBeat2(int beatCounter);
+static void playBeat1(int beatCounter);
+static void playBeat2(int beatCounter);
 
 static pthread_mutex_t mutVolume = PTHREAD_MUTEX_INITIALIZER;
 static int volume = DEFAULT_VOLUME;
@@ -74,13 +74,11 @@ void AudioMixer_init(void) {
 	// Initialize the currently active sound-bites being played
 	// REVISIT:- Implement this. Hint: set the pSound pointer to NULL for each
 	//     sound bite.
-	// TODO
 
 	for (int i = 0; i < MAX_SOUND_BITES; i++) {
 		soundBites[i].pSound = NULL;
 		soundBites[i].location = 0;
 	}
-	
 
 	// Open the PCM output
 	int err = snd_pcm_open(&handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
@@ -186,7 +184,7 @@ void AudioMixer_queueSound(wavedata_t *pSound) {
 
 	pthread_mutex_lock(&mutSoundBites);
 
-	for (freeSpaceCursor; freeSpaceCursor < MAX_SOUND_BITES; freeSpaceCursor++) {
+	for ( ; freeSpaceCursor < MAX_SOUND_BITES; freeSpaceCursor++) {
 		// search from space where the last pSound was placed
 
 		if (soundBites[freeSpaceCursor].pSound == NULL) {
@@ -474,7 +472,7 @@ void* enqueueBeatThread(void* arg) {
 
 }
 
-void playBeat1(int beatCounter) {
+static void playBeat1(int beatCounter) {
 	switch (beatCounter) {
 		case 1:
 		case 5:
@@ -503,17 +501,19 @@ void playBeat1(int beatCounter) {
 	}
 }
 
-void playBeat2(int beatCounter) {
+static void playBeat2(int beatCounter) {
 
 	switch (beatCounter) {
 		case 1:
 			AudioMixer_queueSound(&dBass);
 		case 2:
+			AudioMixer_queueSound(&dHH);
+			break;
 		case 3:
+			AudioMixer_queueSound(&dSnare);
 			break;
 		case 4:
 			AudioMixer_queueSound(&dBass);
-			AudioMixer_queueSound(&dSnare);
 			break;
 		case 5:
 			AudioMixer_queueSound(&dHH);

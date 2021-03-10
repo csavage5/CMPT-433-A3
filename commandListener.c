@@ -31,7 +31,6 @@ static void* listenerThread(void *arg);
 static void detectCommands();
 static void sendReply();
 
-static void changeVolume(int value, int direction);
 static int getUptime();
 
 void commandListener_init() {
@@ -264,22 +263,6 @@ static void sendReply() {
         printf("Reply Error: %s\n\n", strerror(errno));
     }
 
-}
-
-// Pass 0 for down, 1 for up
-static void changeVolume(int value, int direction) {
-    switch (direction) {
-        case 0:
-            AudioMixer_setVolume(AudioMixer_getVolume() - value);
-            break;
-
-        case 1:
-            AudioMixer_setVolume(AudioMixer_getVolume() + value);
-            break;
-
-        default:
-            break;
-    }
 }
 
 static int getUptime() {

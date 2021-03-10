@@ -11,13 +11,16 @@
 
 enum direction {UP, DOWN, LEFT, RIGHT, PUSHED, NONE};
 
+//const char * const enumDrumStrings[3] = {"HIGHHAT", "SNARE", "BASS"};
+const char * const enumBeatStrings[3] = {"NO_BEAT", "BEAT1", "BEAT2"};
+
 struct timespec startTime, currTime;
 
 static pthread_t threadPID;
 
 #define INPUT_DELAY_VOL_TEMPO_NSEC 200000000
+#define INPUT_DELAY_BEAT_TEMPO_NSEC 1400000000
 static enum direction lastDirection = NONE; // the last accepted direction
-static time_t lastAcceptedInput;            // when the last joystick input was accepted
 
 static void* listenerThread(void *arg);
 static void initializePins();
@@ -68,6 +71,7 @@ static void* listenerThread(void *arg) {
                 }
 
                 AudioMixer_changeBeat(currentBeat);
+                printf("[joystickController] changed beat to %s\n", enumBeatStrings[currentBeat]);
                 break;
             default:
                 break;
@@ -140,11 +144,14 @@ static enum direction detectDirection() {
             //printf("direction: %d\n", i);
             //timespec_get(&currTime, TIME_UTC);
             clock_gettime( CLOCK_MONOTONIC_RAW, &currTime);
-            if (lastDirection == i && getTimespecDifference() < INPUT_DELAY_VOL_TEMPO_NSEC) {
+            if (lastDirection == i && i != PUSHED && getTimespecDifference() < INPUT_DELAY_VOL_TEMPO_NSEC) {
                 // CASE: user is holding same input from last check
                 //       and delay period hasn't elapsed - pretend no input received
                 //printf("Direction: %d\nTime: %ld\n", i, currTime.tv_nsec - startTime.tv_nsec);
                 return NONE;
+            } else if (lastDirection == i && i == PUSHED && getTimespecDifference() < INPUT_DELAY_BEAT_TEMPO_NSEC) {
+                // use different delay for cycling beat
+                return NONE; 
             }
 
             //timespec_get(&startTime, TIME_UTC);
