@@ -52,7 +52,6 @@ static void* listenerThread(void *arg) {
                 printf("[joystickController] set VOL: %d\n", AudioMixer_getVolume());
                 break;
             case LEFT:
-                // TODO LEFT: BPM -5
                 AudioMixer_setBPM(AudioMixer_getBPM() - 5);
                 printf("[joystickController] set BPM: %d\n", AudioMixer_getBPM());
                 break;
@@ -60,8 +59,15 @@ static void* listenerThread(void *arg) {
                 AudioMixer_setBPM(AudioMixer_getBPM() + 5);
                 printf("[joystickController] set BPM: %d\n", AudioMixer_getBPM());
                 break;
-            case PUSHED:
-                // TODO PUSHED: cycle through beat modes
+            case PUSHED:;
+                enum beat currentBeat = AudioMixer_getBeat();
+                if (currentBeat == BEAT2) {
+                    currentBeat = NO_BEAT;
+                } else {
+                    currentBeat += 1;
+                }
+
+                AudioMixer_changeBeat(currentBeat);
                 break;
             default:
                 break;

@@ -12,6 +12,8 @@
 #define AUD_DRUM_BASS "wave-files/bass_hard.wav"
 #define AUD_DRUM_SNARE "wave-files/snare_hard.wav"
 
+
+
 static snd_pcm_t *handle;
 
 #define SAMPLE_RATE 44100
@@ -50,12 +52,23 @@ static pthread_mutex_t audioMutex = PTHREAD_MUTEX_INITIALIZER;
 void* enqueueBeatThread(void* arg);
 static pthread_t enqueueBeatThreadId;
 
+enum beat currentBeat = BEAT1;
+static pthread_mutex_t mutBeat = PTHREAD_MUTEX_INITIALIZER;
+
+struct timespec beatDelay;
+
+wavedata_t dBass;
+wavedata_t dHH;
+wavedata_t dSnare;
+void playBeat1(int beatCounter);
+void playBeat2(int beatCounter);
 
 static pthread_mutex_t mutVolume = PTHREAD_MUTEX_INITIALIZER;
 static int volume = DEFAULT_VOLUME;
 
 static pthread_mutex_t mutBPM = PTHREAD_MUTEX_INITIALIZER;
 static int bpm = DEFAULT_BPM;
+
 
 void AudioMixer_init(void) {
 	AudioMixer_setVolume(DEFAULT_VOLUME);
@@ -405,59 +418,123 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 }
 
 void* enqueueBeatThread(void* arg) {
-	int beatCounter = 10; // i.e. 1.0, 1.5, 2.0, 2.5, ...
-	struct timespec beatDelay;
+	int beatCounter = 1;
 
-	wavedata_t dBass;
-	wavedata_t dHH;
-	wavedata_t dSnare;
-	
 	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_BASS, &dBass);
 	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_HIGHHAT, &dHH);
 	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_SNARE, &dSnare);
 
-	
 	while (1) {	
-
-		switch (beatCounter) {
-			case 10:
-				AudioMixer_queueSound(&dHH);
-				AudioMixer_queueSound(&dBass);
+		switch (AudioMixer_getBeat()) {
+			case BEAT1:
+				playBeat1(beatCounter);
 				break;
 
-			case 15:
-				AudioMixer_queueSound(&dHH);
-				break;
-
-			case 20:
-				AudioMixer_queueSound(&dHH);
-				AudioMixer_queueSound(&dSnare);
-				break;
-
-			case 25:
-				AudioMixer_queueSound(&dHH);
+			case BEAT2:
+				playBeat2(beatCounter);
 				break;
 			
 			default:
 				break;
 		}
-
+		
 		//Time For Half Beat [sec] = 60 [sec/min] / BPM / 2 [half-beats per beat]
-		beatDelay.tv_nsec = (60.0f / AudioMixer_getBPM() / 2) * 1000000000;
+		beatDelay.tv_nsec = (60.0f / AudioMixer_getBPM() / 4) * 1000000000; // quarter beats
 		//printf("Waiting for %ld nanoseconds...\n", beatDelay.tv_nsec);
 		
 		nanosleep(&beatDelay, NULL); // wait for next beat
 		
-		if (beatCounter == 25) {
-			beatCounter = 10;
+		if (beatCounter == 8) {
+			beatCounter = 1;
 		} else {
-			beatCounter += 5;
+			beatCounter += 1;
 		}
 
 	}
 
 	return NULL;
 
+}
+
+void playBeat1(int beatCounter) {
+	switch (beatCounter) {
+		case 1:
+		case 5:
+			AudioMixer_queueSound(&dHH);
+			AudioMixer_queueSound(&dBass);
+			break;
+
+		case 2:
+		case 6:
+			AudioMixer_queueSound(&dHH);
+			break;
+
+		case 3:
+		case 7:
+			AudioMixer_queueSound(&dHH);
+			AudioMixer_queueSound(&dSnare);
+			break;
+
+		case 4:
+		case 8:
+			AudioMixer_queueSound(&dHH);
+			break;
+		
+		default:
+			break;
+	}
+}
+
+void playBeat2(int beatCounter) {
+
+	switch (beatCounter) {
+		case 1:
+			AudioMixer_queueSound(&dBass);
+		case 2:
+		case 3:
+			break;
+		case 4:
+			AudioMixer_queueSound(&dBass);
+			AudioMixer_queueSound(&dSnare);
+			break;
+		case 5:
+			AudioMixer_queueSound(&dHH);
+			AudioMixer_queueSound(&dBass);
+			break;
+		case 6:
+			AudioMixer_queueSound(&dBass);
+			AudioMixer_queueSound(&dHH);
+			break;
+		case 7:
+			AudioMixer_queueSound(&dHH);
+			AudioMixer_queueSound(&dSnare);
+			AudioMixer_queueSound(&dBass);
+			break;
+		case 8:
+			AudioMixer_queueSound(&dHH);
+			break;
+		
+		default:
+			break;
+	}
+
+}
+
+void AudioMixer_changeBeat(enum beat newBeat) {
+	if (newBeat > 2) {
+		return;
+	}
+	pthread_mutex_lock(&mutBeat);
+	currentBeat = newBeat;
+	pthread_mutex_unlock(&mutBeat);
+}
+
+enum beat AudioMixer_getBeat() {
+	enum beat temp;
+	pthread_mutex_lock(&mutBeat);
+	temp = currentBeat;
+	pthread_mutex_unlock(&mutBeat);
+	return temp;
 }
 
 void* playbackThread(void* arg) {

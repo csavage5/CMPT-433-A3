@@ -39,4 +39,7 @@ void AudioMixer_setVolume(int newVolume);
 int AudioMixer_getBPM();
 void AudioMixer_setBPM(int newBPM);
 
+enum beat {NO_BEAT, BEAT1, BEAT2};
+void AudioMixer_changeBeat(enum beat newBeat);
+enum beat AudioMixer_getBeat();
 #endif

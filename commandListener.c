@@ -144,7 +144,7 @@ static void* listenerThread(void *arg) {
             if (strcmp("drum", commands[1]) == 0) {
                 // TODO 
             } else if (strcmp("beat", commands[1]) == 0) {
-                // TODO 
+                AudioMixer_changeBeat(atoi(commands[2]));
             } 
 
         } else {
