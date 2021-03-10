@@ -101,7 +101,7 @@ static void* listenerThread(void *arg) {
             if (strcmp("vol", commands[1]) == 0) {
                 sprintf(pReply, "%d", AudioMixer_getVolume());
             } else if (strcmp("tempo", commands[1]) == 0) {
-                printf("ERROR: not implemented");
+                sprintf(pReply, "%d", AudioMixer_getBPM());
             } else if (strcmp("uptime", commands[1]) == 0) {
                 int uptime = getUptime();
                 int hours = uptime / 3600;
