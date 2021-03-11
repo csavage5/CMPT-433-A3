@@ -72,7 +72,7 @@ static int initI2cBus(char* bus, int address){
 
 static void readI2cReg(int i2cFileDesc){
 	long seconds = 0;
-    long nanoseconds = 500000000;
+    long nanoseconds = 300000000;
     struct timespec reqDelay = {seconds, nanoseconds};
 
 	// Adapted from https://github.com/ControlEverythingCommunity/MMA8452Q/blob/master/C/MMA8452Q.c
