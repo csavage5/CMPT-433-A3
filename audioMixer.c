@@ -434,7 +434,7 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 }
 
 void* enqueueBeatThread(void* arg) {
-	int beatCounter = 1;
+	int beatCounter = 1; // counts half beats
 
 	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_BASS, &dBass);
 	AudioMixer_readWaveFileIntoMemory(AUD_DRUM_HIGHHAT, &dHH);
@@ -455,7 +455,7 @@ void* enqueueBeatThread(void* arg) {
 		}
 		
 		//Time For Half Beat [sec] = 60 [sec/min] / BPM / 2 [half-beats per beat]
-		beatDelay.tv_nsec = (60.0f / AudioMixer_getBPM() / 4) * 1000000000; // quarter beats
+		beatDelay.tv_nsec = (60.0f / AudioMixer_getBPM() / 2) * 1000000000; // quarter notes
 		//printf("Waiting for %ld nanoseconds...\n", beatDelay.tv_nsec);
 		
 		nanosleep(&beatDelay, NULL); // wait for next beat
@@ -507,7 +507,7 @@ static void playBeat2(int beatCounter) {
 		case 1:
 			AudioMixer_queueSound(&dBass);
 		case 2:
-			AudioMixer_queueSound(&dHH);
+			//AudioMixer_queueSound(&dHH);
 			break;
 		case 3:
 			AudioMixer_queueSound(&dSnare);
