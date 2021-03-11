@@ -100,28 +100,26 @@ static void readI2cReg(int i2cFileDesc){
 		if(zAccl > 2047){
 			zAccl -= 4096;
 		}
-        
-
-		// Output data to screen
-		// printf("Acceleration in X-Axis : %d \n", xAccl);
-		// printf("Acceleration in Y-Axis : %d \n", yAccl);
-		// printf("Acceleration in Z-Axis : %d \n\n\n", zAccl);
-		
-		if(xAccl > 500 || xAccl < -300) {
-			// TODO PLAY SOUND FUNCTION HERE
+    
+		// thresholds
+		if(xAccl > 600 || xAccl < -600) {
+			printf("Acceleration in X-Axis : %d \n", xAccl);
 			AudioMixer_playSound(HIGHHAT);
+			printf("[accelerometerModule] played HIGHHAT\n");
 			nanosleep(&reqDelay, (struct timespec *) NULL);
 			return;
 		}
-		if(yAccl > 500 || yAccl < -300) {
-			// TODO PLAY SOUND FUNCTION HERE
+		if(yAccl > 600 || yAccl < -600) {
+			printf("Acceleration in Y-Axis : %d \n", yAccl);
+			printf("[accelerometerModule] played SNARE\n");
 			AudioMixer_playSound(SNARE);
 			nanosleep(&reqDelay, (struct timespec *) NULL);
 			return;
 		}
-		if(zAccl > 1300|| zAccl < 800) {
-			// TODO PLAY SOUND FUNCTION HERE
+		if(zAccl > 1500|| zAccl < 400) {
+			printf("Acceleration in Z-Axis : %d \n", zAccl);
 			AudioMixer_playSound(BASS);
+			printf("[accelerometerModule] played BASS\n");
 			nanosleep(&reqDelay, (struct timespec *) NULL);
 			return;
 		}

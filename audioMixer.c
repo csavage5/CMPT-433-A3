@@ -384,52 +384,68 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 	 *
 	 */
 
-	playbackSound_t *pSoundBite = NULL;
+	
 	// (1)
 	memset(playbackBuffer, 0, playbackBufferSize * SAMPLE_SIZE);
 
 	// (2), (3)
+	int totalSamples = 0;
+	int currentSample = 0;
+	int sample = 0;
+	int currentSuperPos = 0;
+	playbackSound_t *pSoundBite = NULL;
+	
+	pthread_mutex_lock(&mutSoundBites);
+	for (int i = 0; i < MAX_SOUND_BITES; i++) {
+		pSoundBite = &soundBites[i];
+		if (pSoundBite->pSound == NULL) {
+			// CASE: soundBite is empty, skip to next
+			continue;
+		}
 
-	for (int superPosNum = 0; superPosNum < playbackBufferSize; superPosNum++) {
+		totalSamples = pSoundBite->pSound->numSamples;
+		currentSample = pSoundBite->location;
 
-		pthread_mutex_lock(&mutSoundBites);
+		for (int superPos = 0; superPos < playbackBufferSize; superPos++) {
+			// add soundBite's sample to superpositions in playbackBuffer
 
-		for (int i = 0; i < MAX_SOUND_BITES; i++) {
-			if (soundBites[i].pSound != NULL) {
-				// CASE: this soundBite has samples remaining
-				pSoundBite = &soundBites[i];
-				int sample = pSoundBite->pSound->pData[pSoundBite->location];
-				int currentBufferVal = playbackBuffer[superPosNum];
-
-				if (currentBufferVal + sample > SHRT_MAX) {
-					// CASE: overflow buffer, clamp to max
-					playbackBuffer[superPosNum] = SHRT_MAX;
-
-				} else if (currentBufferVal + sample < SHRT_MIN) {
-					// CASE: underflow buffer, clamp to min
-					playbackBuffer[superPosNum] = SHRT_MIN;
-
-				} else {
-					playbackBuffer[superPosNum] += pSoundBite->pSound->pData[pSoundBite->location];
-				}
-
-
-				pSoundBite->location++;
-
-				if (pSoundBite->location == pSoundBite->pSound->numSamples) {
-					// CASE: added last sample of current soundBite 
-					//       to playbackBuffer, remove from soundBites[]
-					pSoundBite->pSound = NULL;
-					pSoundBite->location = 0;
-					//AudioMixer_freeWaveFileData(pSoundBite->pSound);
-				}
+			if (currentSample >= totalSamples) {
+				// CASE: added last sample of current soundBite 
+				//       to playbackBuffer, 'free' from soundBites[]
+				pSoundBite->pSound = NULL;
+				pSoundBite->location = 0;
+				break;
 			}
+			
+			currentSuperPos = playbackBuffer[superPos];
+			sample = pSoundBite->pSound->pData[currentSample];
+
+			if (currentSuperPos + sample > SHRT_MAX) {
+				// CASE: overflow buffer, clamp to max
+				playbackBuffer[superPos] = SHRT_MAX;
+
+			} else if (currentSuperPos + sample < SHRT_MIN) {
+				// CASE: underflow buffer, clamp to min
+				playbackBuffer[superPos] = SHRT_MIN;
+
+			} else {
+				// CASE: no need to clamp
+				playbackBuffer[superPos] += sample;
+			}
+
+			currentSample += 1;
 
 		}
 
-		pthread_mutex_unlock(&mutSoundBites);
+		if (pSoundBite->pSound != NULL) {
+			// CASE: did not put all remaining samples into
+			//       playback buffer - update location
+			pSoundBite->location = currentSample;
+		}
+
 
 	}
+	pthread_mutex_unlock(&mutSoundBites);
 
 }
 
@@ -556,10 +572,6 @@ enum beat AudioMixer_getBeat() {
 }
 
 void* playbackThread(void* arg) {
-
-	// each fillPlaybackBuffer call will fill 0.05 seconds of time => 
-	// each loop takes a half-beat of time - find out how 
-	// many seconds each half-beat is relative to current BPM
 
 	while (!stopping) {
 		// Generate next block of audio

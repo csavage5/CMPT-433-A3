@@ -13,6 +13,9 @@
 #define MAX_LEN_UDP 1500  // 1500 bytes max in UDP packet
 #define PORT 12345
 
+static char * enumBeatStrings[3] = {"NO_BEAT", "BEAT1", "BEAT2"};
+static char * enumDrumStrings[3] = {"HIGHHAT", "SNARE", "BASS"};
+
 static pthread_t threadPID;
 
 static struct sockaddr_in sinLocal;
@@ -115,12 +118,15 @@ static void* listenerThread(void *arg) {
 
             if (strcmp("u", commands[1]) == 0) {
                 AudioMixer_setVolume(AudioMixer_getVolume() + atoi(commands[2]));
-                sprintf(pReply, "%d", AudioMixer_getVolume());
+                int vol = AudioMixer_getVolume();
+                sprintf(pReply, "%d", vol);
+                printf("[commandListener] set VOL: %d via UDP\n", vol);
 
             } else if (strcmp("d", commands[1]) == 0) {
                 AudioMixer_setVolume(AudioMixer_getVolume() - atoi(commands[2]));
-                sprintf(pReply, "%d", AudioMixer_getVolume());
-
+                int vol = AudioMixer_getVolume();
+                sprintf(pReply, "%d", vol);
+                printf("[commandListener] set VOL: %d via UDP\n", vol);
             }
 
         } else if (strcmp("tempo", commands[0]) == 0) {
@@ -129,12 +135,15 @@ static void* listenerThread(void *arg) {
 
             if (strcmp("u", commands[1]) == 0) {
                 AudioMixer_setBPM(AudioMixer_getBPM() + atoi(commands[2]));
-                sprintf(pReply, "%d", AudioMixer_getBPM());
+                int bpm = AudioMixer_getBPM();
+                sprintf(pReply, "%d", bpm);
+                printf("[commandListener] set BPM: %d via UDP\n", bpm);
 
             } else if (strcmp("d", commands[1]) == 0) {
                 AudioMixer_setBPM(AudioMixer_getBPM() - atoi(commands[2]));
-                sprintf(pReply, "%d", AudioMixer_getBPM());
-                
+                int bpm = AudioMixer_getBPM();
+                sprintf(pReply, "%d", bpm);
+                printf("[commandListener] set BPM: %d via UDP\n", bpm);
             }
 
         } else if (strcmp("p", commands[0]) == 0) {
@@ -143,15 +152,19 @@ static void* listenerThread(void *arg) {
             if (strcmp("drum", commands[1]) == 0) {
                 if (strcmp("hh", commands[2]) == 0) {
                     AudioMixer_playSound(HIGHHAT);
+                    printf("[commandListener] played %s via UDP\n", enumDrumStrings[HIGHHAT]);
                 } else if (strcmp("snare", commands[2]) == 0) {
                     AudioMixer_playSound(SNARE);
+                    printf("[commandListener] played %s via UDP\n", enumDrumStrings[SNARE]);
                 } else if (strcmp("bass", commands[2]) == 0) {
                     AudioMixer_playSound(BASS);
+                    printf("[commandListener] played %s via UDP\n", enumDrumStrings[BASS]);
                 }
 
 
             } else if (strcmp("beat", commands[1]) == 0) {
                 AudioMixer_changeBeat(atoi(commands[2]));
+                printf("[commandListener] set beat to %s via UDP\n", enumBeatStrings[AudioMixer_getBeat()]);
             } 
 
         } else {
