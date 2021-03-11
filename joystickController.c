@@ -12,7 +12,7 @@
 enum direction {UP, DOWN, LEFT, RIGHT, PUSHED, NONE};
 
 //const char * const enumDrumStrings[3] = {"HIGHHAT", "SNARE", "BASS"};
-const char * const enumBeatStrings[3] = {"NO_BEAT", "BEAT1", "BEAT2"};
+static char * enumBeatStrings[3] = {"NO_BEAT", "BEAT1", "BEAT2"};
 
 struct timespec startTime, currTime;
 
