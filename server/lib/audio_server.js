@@ -6,11 +6,14 @@ const { SSL_OP_EPHEMERAL_RSA } = require('constants');
 var dgram = require('dgram');
 var client = dgram.createSocket('udp4');
 var timeClient = dgram.createSocket('udp4');
+var tempoClient = dgram.createSocket('udp4');
 
 var socketio = require('socket.io');
 var io;
 var newTime = '00:00:00';
 var currentTime = '00:00:00';
+var newVol;
+var newTempo;
 var timeout = false;
 
 // handle incoming UDP
@@ -18,6 +21,11 @@ client.on('listening', () => {
     const address = client.address();
     console.log(`server listening on ${address.address}:${address.port}`);
 })
+
+client.on('message', (msg, senderInfo) => {
+    msg = String.fromCharCode.apply(null,msg);
+    newVol = msg;
+});
 
 timeClient.on('listening', () => {
     const address = timeClient.address();
@@ -30,6 +38,16 @@ timeClient.on('message', (msg, senderInfo) => {
     newTime = msg;
     clearTimeout(bbgErrorTimer);
     timeout = false;
+});
+
+tempoClient.on('listening', () => {
+    const address = tempoClient.address();
+    console.log(`server listening on ${address.address}:${address.port}`);
+})
+
+tempoClient.on('message', (msg, senderInfo) => {
+    msg = String.fromCharCode.apply(null,msg);
+    newTempo = msg;
 });
 
 exports.listen = function(server) {
@@ -65,52 +83,60 @@ function handleCommand(socket) {
 	socket.on('volDown', function(){
         var message = 'Lowering volume';
 		client.send('vol d 5',12345, 'localhost');
-        client.on('message', (msg, senderInfo) => {
-            // Translate from byte array to string
-            msg = String.fromCharCode.apply(null,msg);
-            socket.emit('volumeControl', msg);
-        });
+        updateVol(socket);
         socket.emit('daResponse', message);
     });
 
 	socket.on('volUp', function(){
         var message = 'Raising volume';
 		client.send('vol u 5',12345, 'localhost');
-        client.on('message', (msg, senderInfo) => {
-            // Translate from byte array to string
-            msg = String.fromCharCode.apply(null,msg);
-            socket.emit('volumeControl', msg);
-        });
+        updateVol(socket);
+        socket.emit('daResponse', message);
+    });
+
+    socket.on('getVol', function(){
+        var message = 'Updating volume';
+		client.send('q vol',12345, 'localhost');
+        updateVol(socket);
         socket.emit('daResponse', message);
     });
 
     socket.on('tempoDown', function(){
         var message = 'Lowering tempo';
-		client.send('tempo d 5',12345, 'localhost');
+		tempoClient.send('tempo d 5',12345, 'localhost');
+        updateTempo(socket);
         socket.emit('daResponse', message);
     });
 
 	socket.on('tempoUp', function(){
         var message = 'Raising tempo';
-		client.send('tempo u 5',12345, 'localhost');
+		tempoClient.send('tempo u 5',12345, 'localhost');
+        updateTempo(socket);
+        socket.emit('daResponse', message);
+    });
+
+    socket.on('getTempo', function(){
+        var message = 'Updating tempo';
+		tempoClient.send('q tempo',12345, 'localhost');
+        updateTempo(socket);
         socket.emit('daResponse', message);
     });
 
 	socket.on('playHiHat', function(){
-        var message = 'Raising tempo';
+        var message = 'playHiHat';
 		client.send('p drum hh',12345, 'localhost');
         socket.emit('daResponse', message);
     });
 
 	socket.on('playSnare', function(){
-        var message = 'Raising tempo';
+        var message = 'playSnare';
 		client.send('p drum snare',12345, 'localhost');
         socket.emit('daResponse', message);
     });
 
-	socket.on('playBase', function(){
-        var message = 'Playing Base';
-		client.send('p drum base',12345, 'localhost');
+	socket.on('playBass', function(){
+        var message = 'Playing Bass';
+		client.send('p drum bass',12345, 'localhost');
         socket.emit('daResponse', message);
     });
 
@@ -126,13 +152,23 @@ function handleCommand(socket) {
     });
 }
 
+function updateVol(socket) {
+    setTimeout(function() {
+        socket.emit('volumeControl', newVol);
+    }, 100);
+}
+
 function updateTime(socket) {
-    // hopefully temp fix, send request for new time, 
-    // wait 200ms for update then send current time
     setTimeout(function() {
         if(currentTime != newTime){
             currentTime = newTime;
             socket.emit('uptime', currentTime);
         }
+    }, 100);
+}
+
+function updateTempo(socket) {
+    setTimeout(function() {
+        socket.emit('tempoControl', newTempo);
     }, 100);
 }

@@ -27,6 +27,11 @@ $(document).ready(function() {
 		document.getElementById('volumeid').value = result;
 	});
 
+	socket.on('tempoControl', function(result) {
+		console.log(result)
+		document.getElementById('tempoid').value = result;
+	});
+
 	socket.on('backendTimeout', function() {
 		console.log('Backend is not responding, check that it is running')
 		document.getElementById('error-box').style.display = 'block';
@@ -80,6 +85,12 @@ function volUp() {
 	socket.emit('volUp');
 }
 
+function getVol() {
+	console.log("Sending volume update request");
+	setErrorTimer();
+	socket.emit('getVol');
+}
+
 function tempDown() {
 	console.log("Sending lower tempo request");
 	setErrorTimer();
@@ -90,6 +101,12 @@ function tempUp() {
 	console.log("Sending raise tempo request");
 	setErrorTimer();
 	socket.emit('tempoUp');
+}
+
+function getTempo() {
+	console.log("Sending tempo update request");
+	setErrorTimer();
+	socket.emit('getTempo');
 }
 
 function playHiHat() {
@@ -104,8 +121,8 @@ function playSnare() {
 	socket.emit('playSnare');
 }
 
-function playBase() {
-	console.log("Sending Base request");
+function playBass() {
+	console.log("Sending Bass request");
 	setErrorTimer();
-	socket.emit('playBase');
+	socket.emit('playBass');
 }

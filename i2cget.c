@@ -6,6 +6,9 @@
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 #include <time.h>
+#include <pthread.h>
+
+#include "audioMixer.h"
 
 #define I2CDRV_LINUX_BUS0 "/dev/i2c-0"
 #define I2CDRV_LINUX_BUS1 "/dev/i2c-1"
@@ -15,13 +18,21 @@
 #define I2C_DEVICE_ADDRESS 0x1C
 #define REG_WHO_AM_I 0x0D
 
+static pthread_t threadPID;
 
 // Prototypes
-int initI2cBus(char* bus, int address);
-void readI2cReg(int i2cFileDesc);
+static void* accelerometerThread(void *arg);
+static int initI2cBus(char* bus, int address);
+static void readI2cReg(int i2cFileDesc);
 
-int main(){
+void i2c_init() {
 
+	pthread_create(&threadPID, NULL, accelerometerThread, NULL);
+	printf("Module [accelerometer] initialized\n");
+
+}
+
+static void* accelerometerThread(void *__va_arg_pack_len){
     int i2cFileDesc = initI2cBus(I2CDRV_LINUX_BUS1, I2C_DEVICE_ADDRESS);
 
     // Read the register:
@@ -29,18 +40,16 @@ int main(){
     long nanoseconds = 10000000;
     struct timespec reqDelay = {seconds, nanoseconds};
     while(1) {
-        readI2cReg(i2cFileDesc);  
+        readI2cReg(i2cFileDesc);
         nanosleep(&reqDelay, (struct timespec *) NULL);
-    }  
+    }
 
     // Cleanup I2C access
     close(i2cFileDesc);
-
-    return 0;
-    
+	return 0;    
 }
 
-int initI2cBus(char* bus, int address){
+static int initI2cBus(char* bus, int address){
     int i2cFileDesc;
     if((i2cFileDesc = open(bus, O_RDWR)) < 0){
 		printf("Failed to open the bus.\n");
@@ -61,10 +70,12 @@ int initI2cBus(char* bus, int address){
     return i2cFileDesc;
 }
 
-void readI2cReg(int i2cFileDesc){
-	long seconds = 1;
-    long nanoseconds = 0;
+static void readI2cReg(int i2cFileDesc){
+	long seconds = 0;
+    long nanoseconds = 500000000;
     struct timespec reqDelay = {seconds, nanoseconds};
+
+	// Adapted from https://github.com/ControlEverythingCommunity/MMA8452Q/blob/master/C/MMA8452Q.c
     char reg[1] = {0x00};
 	write(i2cFileDesc, reg, 1);
 	char data[7] = {0};
@@ -95,20 +106,24 @@ void readI2cReg(int i2cFileDesc){
 		// printf("Acceleration in X-Axis : %d \n", xAccl);
 		// printf("Acceleration in Y-Axis : %d \n", yAccl);
 		// printf("Acceleration in Z-Axis : %d \n\n\n", zAccl);
+		
 		if(xAccl > 500 || xAccl < -300) {
 			// TODO PLAY SOUND FUNCTION HERE
-			printf("play x-axis sound\n");
+			AudioMixer_playSound(HIGHHAT);
 			nanosleep(&reqDelay, (struct timespec *) NULL);
+			return;
 		}
 		if(yAccl > 500 || yAccl < -300) {
 			// TODO PLAY SOUND FUNCTION HERE
-			printf("play y-axis sound\n");
+			AudioMixer_playSound(SNARE);
 			nanosleep(&reqDelay, (struct timespec *) NULL);
+			return;
 		}
 		if(zAccl > 1300|| zAccl < 800) {
 			// TODO PLAY SOUND FUNCTION HERE
-			printf("play z-axis sound\n");
+			AudioMixer_playSound(BASS);
 			nanosleep(&reqDelay, (struct timespec *) NULL);
+			return;
 		}
 		
 	}

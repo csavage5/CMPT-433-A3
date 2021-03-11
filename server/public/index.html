@@ -30,22 +30,28 @@
 				<h3>Volume</h3>
 				<p>
 					<input type="button" id="volumeDown" value=" - " onclick="volDown()"/>
-					<input type="text"   id="volumeid" value="???" size="3" style="text-align:center" readonly/>
+					<input type="text"   id="volumeid" value="0" size="3" style="text-align:center" readonly/>
 					<input type="button" id="volumeUp" value=" + " onclick="volUp()"/>
 					(0 - 100)
+				</p>
+				<p>
+					<input type="button" id="updateVol" value="Update Volume" onclick="getVol()"/>
 				</p>
 				<h3>Tempo</h3>
 				<p>
 					<input type="button" id="tempoDown" value=" - " onclick="tempDown()"/>
-					<input type="text"   id="tempoid" value="???" size="3" style="text-align:center" readonly/>
+					<input type="text"   id="tempoid" value="0" size="3" style="text-align:center" readonly/>
 					<input type="button" id="tempoUp" value=" + " onclick="tempUp()"/>
 					(0 - 100)
+				</p>
+				<p>
+					<input type="button" id="updateTempo" value="Update Tempo" onclick="getTempo()"/>
 				</p>
 				<h1>Play Drum Sounds</h1>
 				<p>
 					<input type="button" id="PlayHiHat" value="Hi-Hat" onclick="playHiHat()"/>
 					<input type="button"   id="PlaySnare" value="Snare" onclick="playSnare()"/>
-					<input type="button" id="PlayBase" value=" Base" onclick="playBase()"/>
+					<input type="button" id="PlayBass" value=" Bass" onclick="playBass()"/>
 				</p>
 			</div>
 			
