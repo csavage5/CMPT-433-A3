@@ -2,7 +2,7 @@
 # by Brian Fraser
 
 # Edit this file to compile extra C files into their own programs.
-TARGET= wave_player
+TARGET= beatbox
 
 SOURCES= main.c commandListener.c shutdownManager.c joystickController.c audioMixer.c i2cget.c
 
@@ -34,7 +34,7 @@ LFLAGS = -L$(HOME)/cmpt433/public/asound_lib_BBB
 
 all: wav
 	$(CC_C) $(CFLAGS) $(SOURCES) -o $(OUTDIR)/$(TARGET)  $(LFLAGS) -lpthread -lasound
-
+	(cd server; make all)
 # Copy wave files to the shared folder
 wav:
 	mkdir -p $(PUBDIR)/wave-files/
