@@ -7,7 +7,6 @@ var errorTimer
 
 // Make connection to server when web page is fully loaded.
 $(document).ready(function() {
-	// Make the text-entry box have keyboard focus.
 	socket.on('daResponse', function(result) {
 		console.log(result);
 		clearTimeout(errorTimer);

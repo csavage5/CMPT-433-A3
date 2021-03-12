@@ -1,5 +1,6 @@
 /*
- * Respond to commands over a websocket to do math
+ * Communicate with website over web socket
+ * Communicate with C program over UDP
  */
 
 const { SSL_OP_EPHEMERAL_RSA } = require('constants');
@@ -57,8 +58,6 @@ exports.listen = function(server) {
 	io.sockets.on('connection', function(socket) {
 		handleCommand(socket);
 	});
-	
-	
 };
 
 function handleCommand(socket) {
@@ -153,6 +152,7 @@ function handleCommand(socket) {
 }
 
 function updateVol(socket) {
+    // Small timeout to give new value time to be received
     setTimeout(function() {
         socket.emit('volumeControl', newVol);
     }, 100);

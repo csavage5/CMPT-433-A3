@@ -101,7 +101,7 @@ static void readI2cReg(int i2cFileDesc){
 			zAccl -= 4096;
 		}
     
-		// thresholds
+		// Thresholds for sounds to play
 		if(xAccl > 600 || xAccl < -600) {
 			printf("Acceleration in X-Axis : %d \n", xAccl);
 			AudioMixer_playSound(HIGHHAT);
