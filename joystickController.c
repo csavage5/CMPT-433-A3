@@ -39,12 +39,9 @@ void joystickController_init() {
 
 static void* listenerThread(void *arg) {
     initializePins();
-    //timespec_get(&startTime, TIME_UTC);
     clock_gettime(CLOCK_MONOTONIC_RAW, &startTime);
     while(1) {
         
-        // TODO wait for joystick direction to be pressed
-
         switch (detectDirection()) {
             case UP:
                 AudioMixer_setVolume(AudioMixer_getVolume() + 5);
@@ -113,12 +110,6 @@ static void exportPin(int pin) {
 
 static enum direction detectDirection() {
     // 1 == OFF, 0 == ON
-    
-    //TODO must allow user to hold button to cycle through
-        // modes or change volume/tempo at a reasonable rate
-        // Need to use timer to return a non-NONE value every 
-        // ~half-second, and lastDirection to tell if the
-        // same direction is being held
     
     char *filenames[5] = {"/sys/class/gpio/gpio26/value",
                         "/sys/class/gpio/gpio46/value",

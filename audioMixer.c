@@ -21,11 +21,6 @@ static snd_pcm_t *handle;
 // Sample size note: This works for mono files because each sample ("frame') is 1 value.
 // If using stereo files then a frame would be two samples.
 
-static unsigned long playbackBufferSize = 0;
-static short *playbackBuffer = NULL;
-
-
-// Currently active (waiting to be played) sound bites
 #define MAX_SOUND_BITES 30
 typedef struct {
 	// A pointer to a previously allocated sound bite (wavedata_t struct).
@@ -39,6 +34,10 @@ typedef struct {
 } playbackSound_t;
 static playbackSound_t soundBites[MAX_SOUND_BITES];
 static pthread_mutex_t mutSoundBites = PTHREAD_MUTEX_INITIALIZER;
+
+static unsigned long playbackBufferSize = 0;
+static short *playbackBuffer = NULL;
+
 static int freeSpaceCursor = 0;
 
 // Playback threading
@@ -50,9 +49,9 @@ static pthread_t playbackThreadId;
 void* enqueueBeatThread(void* arg);
 static pthread_t enqueueBeatThreadId;
 
+// Beat state
 enum beat currentBeat = BEAT1;
 static pthread_mutex_t mutBeat = PTHREAD_MUTEX_INITIALIZER;
-
 struct timespec beatDelay;
 
 wavedata_t dBass;
@@ -61,6 +60,7 @@ wavedata_t dSnare;
 static void playBeat1(int beatCounter);
 static void playBeat2(int beatCounter);
 
+// Volume and BPM
 static pthread_mutex_t mutVolume = PTHREAD_MUTEX_INITIALIZER;
 static int volume = DEFAULT_VOLUME;
 
@@ -442,7 +442,6 @@ static void fillPlaybackBuffer(short *playbackBuffer, int size) {
 			//       playback buffer - update location
 			pSoundBite->location = currentSample;
 		}
-
 
 	}
 	pthread_mutex_unlock(&mutSoundBites);

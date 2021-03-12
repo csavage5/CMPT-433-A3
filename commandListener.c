@@ -62,25 +62,13 @@ static void socketInit() {
     }
 }
 
-
-/*
-    Thread loop:
-        wait for incoming command
-        possible command:
-            change beat; reply with new beat
-            change volume; reply with new volume
-            change tempo; reply with new tempo
-            play specific sound; reply with success
-            get uptime; reply with uptime
-*/
-
 static void* listenerThread(void *arg) {
 
     socketInit();
 
     static int messageLen; // tracks # of bytes received from packet, -1 if error
 
-    pReply = (char*)malloc(16000 * sizeof(char)); // malloc space for reply
+    pReply = (char*)malloc(MAX_LEN_UDP * sizeof(char)); // malloc space for reply
 
     //char *endptr = NULL; // for strtol
 
@@ -95,7 +83,7 @@ static void* listenerThread(void *arg) {
         }
 
         detectCommands();
-        printf("0: %s, 1: %s, 2: %s\n", commands[0], commands[1], commands[2]);
+        //printf("0: %s, 1: %s, 2: %s\n", commands[0], commands[1], commands[2]);
 
         if (strcmp("q", commands[0]) == 0) {
             // CASE: server sent "q" - reply with requested info
@@ -171,8 +159,6 @@ static void* listenerThread(void *arg) {
             sprintf(pReply, "Error: invalid command \"%s\"\n\n", commands[0]);
         }
 
-        printf("Size of pReply: %u\n", strlen(pReply));
-
         // reply with message
         sendReply();
         
@@ -219,8 +205,6 @@ static void detectCommands() {
 // it is > 1500 bytes.
 static void sendReply() {
 
-    // TODO remove check for large replies, not applicable to this assignment
-
     // check if pMessage is bigger than MAX_LEN
     //  if it is, loop:
     //      - scan bytes from starting point, keeping pointer to last \n found
@@ -228,48 +212,9 @@ static void sendReply() {
     //        the \n pointer
     //      - set new starting point to next character after last \n
 
-    char *pStart = pReply;
-    char *pEnd = NULL;      // last \n encountered
-    char *pCursor = pReply;
 
-    int bytesSinceLastNewline = 0; //bytes since last \n
-    int bytesToSend = 0;
-
-    int err;
-    //printf("pMessage is initially %d chars long\n", strlen(pCursor));
-    while (strlen(pCursor) >= 1500) {
-
-        for (int i = 0; i < 1500; i++) {
-            
-            bytesSinceLastNewline++;
-
-            if (*pCursor == '\n') {
-                pEnd = pCursor;
-                bytesToSend += bytesSinceLastNewline;
-                bytesSinceLastNewline = 0;
-            }
-
-            pCursor++;
-            
-        }
-
-        printf("Sending %d bytes of pReply...\n", bytesToSend);
-        err = sendto(socketDescriptor, pStart, bytesToSend, 
-                        0, (struct sockaddr *) &sinRemote, sinRemote_len);
-       
-        if (err == -1) {
-            printf("Reply Error: %s\n\n", strerror(errno));
-        }
-
-        // set pStart, pCursor = pEnd + 1
-        pStart = pEnd + 1;
-        pCursor = pEnd + 1;
-        bytesToSend = 0;
-        bytesSinceLastNewline = 0;
-    }
-
-    printf("Sending %d bytes of pReply...\n", strlen(pStart));
-    err = sendto(socketDescriptor, pStart, strlen(pStart), 
+    //printf("Sending %d bytes of pReply...\n", strlen(pStart));
+    int err = sendto(socketDescriptor, pReply, strlen(pReply), 
                     0, (struct sockaddr *) &sinRemote, sinRemote_len);
     
     if (err == -1) {
@@ -285,8 +230,6 @@ static int getUptime() {
 }
 
 void commandListener_shutdown() {
-
-    //TODO remove, don't need to support shutdown
 
     pthread_join(threadPID, NULL);
 
